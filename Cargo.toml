@@ -1,6 +1,17 @@
+[package]
+name = "gyu"
+version = "0.1.0"
+
 [workspace]
-members = [
-    "bitcoin",
-    "ethereum",
-    "model",
-]
+members = ["bitcoin", "ethereum", "model"]
+
+[dependencies]
+base58 = { version = "0.1" }
+
+
+[lib]
+path = "gyu/lib.rs"
+
+[[bin]]
+name = "gyu"
+path = "gyu/main.rs"
