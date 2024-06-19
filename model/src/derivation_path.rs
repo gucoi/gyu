@@ -6,7 +6,7 @@ use core::{
 };
 use std::fmt::write;
 
-pub trait DErivationPath:
+pub trait DerivationPath:
     Clone + Debug + Display + FromStr + Send + Sync + 'static + Eq + Sized
 {
     fn to_vec(&self) -> Result<Vec<ChildIndex>, DerivationPathError>;
