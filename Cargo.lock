@@ -274,6 +274,7 @@ dependencies = [
  "base58",
  "base58-monero",
  "bech32",
+ "crypto-mac",
  "failure",
  "hex",
  "libsecp256k1",
