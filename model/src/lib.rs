@@ -7,6 +7,8 @@ extern crate alloc;
 pub mod derivation_path;
 pub mod network;
 
+pub mod address;
+
 pub mod no_std;
 
 pub mod format;
