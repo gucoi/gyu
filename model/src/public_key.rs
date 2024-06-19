@@ -1,5 +1,6 @@
 use crate::{derivation_path, format::Format};
 
+use crate::address::{Address, AddressError};
 use crate::private_key::PrivateKey;
 
 use crate::no_std::*;
@@ -14,6 +15,7 @@ pub trait PublicKey:
 {
     type Format: Format;
     type PrivateKey: PrivateKey;
+    type Address: Address;
 
     fn from_private_key(private_key: &Self::PrivateKey) -> Self;
 

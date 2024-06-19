@@ -1,17 +1,22 @@
+use crate::address::{Address, AddressError};
 use crate::format::Format;
 
 use crate::no_std::*;
+use crate::public_key::PublicKey;
 use core::{
     fmt::{Debug, Display},
     str::FromStr,
 };
-use std::{fmt::format, hash::Hash, str::pattern::Pattern};
 
 use rand::Rng;
 
 pub trait PrivateKey:
     Clone + Debug + Display + FromStr + Send + Sync + 'static + Eq + Sized
 {
+    type Address: Address;
+    type PublicKey: PublicKey;
+    type Format: Format;
+
     fn new<R: Rng>(rng: &mut R) -> Result<Self, PrivateKeyError>;
 
     fn to_public_key(&self) -> Self::PublicKey;
