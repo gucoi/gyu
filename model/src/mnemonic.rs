@@ -61,17 +61,18 @@ pub enum MnemonicError {
     #[fail(display = "{}", _0)]
     AddressError(AddressError),
 
-    #[fail(display = "{} : {}", _0, _1)]
+    #[fail(display = "{}: {}", _0, _1)]
     Crate(&'static str, String),
 
-    #[fail(display = "{}" _0)]
-    ExtendPrivateKeyError(ExtendedPrivateKeyError),
+    #[fail(display = "{}", _0)]
+    ExtendedPrivateKeyError(ExtendedPrivateKeyError),
 
     #[fail(
-        display = "Invalid checksum word: {{expected: {:?}, found: {:?}}}",
+        display = "Invalid checksum word: {{ expected: {:?}, found: {:?} }}",
         _0, _1
     )]
     InvalidChecksumWord(String, String),
+
     #[fail(display = "Invalid decoding from word to seed")]
     InvalidDecoding,
 
@@ -117,7 +118,7 @@ impl From<AddressError> for MnemonicError {
 
 impl From<ExtendedPrivateKeyError> for MnemonicError {
     fn from(value: ExtendedPrivateKeyError) -> Self {
-        MnemonicError::ExtendPrivateKeyError(value)
+        MnemonicError::ExtendedPrivateKeyError(value)
     }
 }
 

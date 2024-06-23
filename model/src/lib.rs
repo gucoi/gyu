@@ -28,3 +28,5 @@ pub mod utilities;
 pub mod mnemonic;
 
 pub mod wordlist;
+
+pub mod transaction;
