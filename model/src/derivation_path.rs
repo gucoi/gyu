@@ -4,7 +4,6 @@ use core::{
     fmt::{Debug, Display},
     str::FromStr,
 };
-use std::fmt::write;
 
 pub trait DerivationPath:
     Clone + Debug + Display + FromStr + Send + Sync + 'static + Eq + Sized

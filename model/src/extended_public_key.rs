@@ -1,6 +1,6 @@
 use crate::address::{Address, AddressError};
 use crate::derivation_path::{DerivationPath, DerivationPathError};
-use crate::extended_private_key::{self, ExtendedPrivateKey};
+use crate::extended_private_key::ExtendedPrivateKey;
 use crate::format::Format;
 use crate::network::NetworkError;
 use crate::public_key::{PublicKey, PublicKeyError};

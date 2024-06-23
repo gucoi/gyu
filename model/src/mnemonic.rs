@@ -10,6 +10,7 @@ use crate::{
     extended_private_key::{ExtendedPrivateKey, ExtendedPrivateKeyError},
     extended_public_key::ExtendedPublicKey,
     private_key::PrivateKeyError,
+    wordlist::WordlistError,
 };
 use crate::{format::Format, private_key::PrivateKey, public_key::PublicKey};
 

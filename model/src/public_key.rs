@@ -1,4 +1,4 @@
-use crate::{derivation_path, format::Format};
+use crate::format::Format;
 
 use crate::address::{Address, AddressError};
 use crate::private_key::PrivateKey;
