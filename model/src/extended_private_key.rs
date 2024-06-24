@@ -1,4 +1,4 @@
-use crate::address::{Address, AddressError};
+use crate::address::Address;
 use crate::derivation_path::{DerivationPath, DerivationPathError};
 
 use crate::format::Format;
