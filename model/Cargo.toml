@@ -1,7 +1,8 @@
 [package]
-name = "model"
+name = "gyu-model"
 version = "0.1.0"
 edition = "2021"
+
 
 [dependencies]
 failure = { version = "0.1.8", default-features = false, features = ["derive"] }
@@ -20,6 +21,7 @@ ripemd160 = { version = "0.8", default-features = false }
 rlp = { version = "0.4", default-features = false }
 sha2 = { version = "0.8", default-features = false }
 ff = { version = "0.6.0", optional = true }
+uint = { version = "0.8.3", default-features = false }
 
 [features]
 default = ["std"]
