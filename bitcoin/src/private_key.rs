@@ -5,6 +5,7 @@ use base58::{FromBase58, ToBase58};
 use gyu_model::{
     address::{Address, AddressError},
     private_key::{PrivateKey, PrivateKeyError},
+    public_key::PublicKey,
     utilities::crypto::checksum,
 };
 

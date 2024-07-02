@@ -1,7 +1,8 @@
-use base58::FromBase58;
-use bech32::{Bech32, FromBase32};
+use base58::{FromBase58, ToBase58};
+use bech32::{u5, Bech32, FromBase32, ToBase32};
 use gyu_model::{
     address::{Address, AddressError},
+    private_key::PrivateKey,
     utilities::crypto::{checksum, hash160},
 };
 
@@ -24,23 +25,6 @@ impl<N: BitcoinNetwork> Address for BitcoinAddress<N> {
     type PrivateKey = BitcoinPrivateKey<N>;
     type PublicKey = BitcoinPublicKey<N>;
 
-    fn from_public_key(
-        public_key: &Self::PublicKey,
-        format: &Self::Format,
-    ) -> Result<Self, gyu_model::address::AddressError> {
-        match format {
-            BitcoinFormat::P2PKH => Self::p2pkh(public_key),
-            BitcoinFormat::P2WSH => {
-                return Err(AddressError::IncompatibleFormats(
-                    String::from("non-script"),
-                    String::from("p2wsh address"),
-                ))
-            }
-            BitcoinFormat::P2SH_P2WPKH => Self::p2sh_p2wpkh(public_key),
-            BitcoinFormat::Bech32 => Self::bech32(public_key),
-        }
-    }
-
     fn from_private_key(
         private_key: &Self::PrivateKey,
         format: &Self::Format,
@@ -56,6 +40,23 @@ impl<N: BitcoinNetwork> Address for BitcoinAddress<N> {
             }
             BitcoinFormat::P2SH_P2WPKH => Self::p2sh_p2wpkh(&public_key),
             BitcoinFormat::Bech32 => Self::bech32(&public_key),
+        }
+    }
+
+    fn from_public_key(
+        public_key: &Self::PublicKey,
+        format: &Self::Format,
+    ) -> Result<Self, gyu_model::address::AddressError> {
+        match format {
+            BitcoinFormat::P2PKH => Self::p2pkh(public_key),
+            BitcoinFormat::P2WSH => {
+                return Err(AddressError::IncompatibleFormats(
+                    String::from("non-script"),
+                    String::from("p2wsh address"),
+                ))
+            }
+            BitcoinFormat::P2SH_P2WPKH => Self::p2sh_p2wpkh(public_key),
+            BitcoinFormat::Bech32 => Self::bech32(public_key),
         }
     }
 }

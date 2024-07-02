@@ -1,7 +1,8 @@
 use gyu_model::{
-    address::AddressError,
+    address::{Address, AddressError},
     public_key::{PublicKey, PublicKeyError},
 };
+
 use std::{fmt::Display, marker::PhantomData, str::FromStr};
 
 use crate::{
