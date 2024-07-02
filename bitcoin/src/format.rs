@@ -1,9 +1,7 @@
 use core::fmt;
-use std::fmt::write;
 
 use gyu_model::{
-    address::AddressError, extended_private_key::ExtendedPrivateKeyError,
-    extended_public_key::ExtendedPublicKeyError, format::Format,
+    address::AddressError, extended_private_key::ExtendedPrivateKeyError, format::Format,
 };
 use serde::Serialize;
 
@@ -44,7 +42,9 @@ impl BitcoinFormat {
         match prefix[0..4] {
             [0x04, 0x88, 0xAD, 0xE4] | [0x04, 0x35, 0x83, 0x94] => Ok(BitcoinFormat::P2PKH),
             [0x04, 0x9D, 0x7C, 0xB2] | [0x04, 0x4A, 0x52, 0x62] => Ok(BitcoinFormat::P2SH_P2WPKH),
-            _ => Err(ExtendedPublicKeyError::InvalidVersionBytes(prefix.to_vec())),
+            _ => Err(ExtendedPrivateKeyError::InvalidVersionBytes(
+                prefix.to_vec(),
+            )),
         }
     }
 }
@@ -55,7 +55,7 @@ impl fmt::Display for BitcoinFormat {
             BitcoinFormat::P2PKH => write!(f, "p2pkh"),
             BitcoinFormat::P2WSH => write!(f, "p2wsh"),
             BitcoinFormat::P2SH_P2WPKH => write!(f, "p2sh_p2wpkh"),
-            BitcoinFormat::Bech32 => write(f, "bech32"),
+            BitcoinFormat::Bech32 => write!(f, "bech32"),
         }
     }
 }
