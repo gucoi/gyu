@@ -20,6 +20,7 @@ pub trait Address:
         private_key: &Self::PrivateKey,
         format: &Self::Format,
     ) -> Result<Self, AddressError>;
+
     fn from_public_key(
         public_key: &Self::PublicKey,
         format: &Self::Format,
@@ -28,7 +29,7 @@ pub trait Address:
 
 #[derive(Debug, Fail)]
 pub enum AddressError {
-    #[fail(display = "{} : {}", _0, _1)]
+    #[fail(display = "{}: {}", _0, _1)]
     Crate(&'static str, String),
 
     #[fail(display = "invalid format conversion from {:?} to {:?}", _0, _1)]
@@ -84,20 +85,20 @@ impl From<crate::no_std::FromUtf8Error> for AddressError {
 }
 
 impl From<&'static str> for AddressError {
-    fn from(value: &'static str) -> Self {
-        AddressError::Message(value.into())
+    fn from(msg: &'static str) -> Self {
+        AddressError::Message(msg.into())
     }
 }
 
 impl From<PrivateKeyError> for AddressError {
-    fn from(value: PrivateKeyError) -> Self {
-        AddressError::PrivateKeyError(value)
+    fn from(error: PrivateKeyError) -> Self {
+        AddressError::PrivateKeyError(error)
     }
 }
 
 impl From<PublicKeyError> for AddressError {
-    fn from(value: PublicKeyError) -> Self {
-        AddressError::PublicKeyError(value)
+    fn from(error: PublicKeyError) -> Self {
+        AddressError::PublicKeyError(error)
     }
 }
 
