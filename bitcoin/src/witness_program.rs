@@ -1,6 +1,8 @@
 use failure::Fail;
+use gyu_model::address::AddressError;
 use gyu_model::no_std::*;
 use gyu_model::transaction::TransactionError;
+use std::net::IpAddr;
 use std::str::FromStr;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -22,6 +24,12 @@ pub enum WitnessProgramError {
 
     #[fail(display = "error decoding program from hex string")]
     ProgramDecodingError,
+}
+
+impl From<WitnessProgramError> for AddressError {
+    fn from(value: WitnessProgramError) -> Self {
+        AddressError::Crate("WitnessProgram", format!("{:?}", value))
+    }
 }
 
 impl From<WitnessProgramError> for TransactionError {
@@ -82,6 +90,7 @@ impl WitnessProgram {
 
         Ok(())
     }
+
     pub fn to_scriptpubkey(&self) -> Vec<u8> {
         let mut output = Vec::with_capacity(self.program.len() + 2);
         let encoded_version = if self.version > 0 {
