@@ -5,10 +5,11 @@ use gyu_model::{
     private_key::PrivateKey,
     utilities::crypto::{checksum, hash160},
 };
+use sha2::Sha256;
 
 use crate::{
     format::BitcoinFormat, network::BitcoinNetwork, private_key::BitcoinPrivateKey,
-    public_key::BitcoinPublicKey,
+    public_key::BitcoinPublicKey, witness_program::WitnessProgram,
 };
 
 use std::{fmt::Display, marker::PhantomData, str::FromStr};
