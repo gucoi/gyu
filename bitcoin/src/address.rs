@@ -1,18 +1,19 @@
-use base58::{FromBase58, ToBase58};
-use bech32::{u5, Bech32, FromBase32, ToBase32};
+use crate::format::BitcoinFormat;
+use crate::network::BitcoinNetwork;
+use crate::private_key::BitcoinPrivateKey;
+use crate::public_key::BitcoinPublicKey;
+use crate::witness_program::WitnessProgram;
+use gyu_model::no_std::*;
 use gyu_model::{
     address::{Address, AddressError},
     private_key::PrivateKey,
     utilities::crypto::{checksum, hash160},
 };
-use sha2::Sha256;
 
-use crate::{
-    format::BitcoinFormat, network::BitcoinNetwork, private_key::BitcoinPrivateKey,
-    public_key::BitcoinPublicKey, witness_program::WitnessProgram,
-};
-
-use std::{fmt::Display, marker::PhantomData, str::FromStr};
+use base58::{FromBase58, ToBase58};
+use bech32::{u5, Bech32, FromBase32, ToBase32};
+use core::{convert::TryFrom, fmt, marker::PhantomData, str::FromStr};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BitcoinAddress<N: BitcoinNetwork> {
@@ -26,10 +27,11 @@ impl<N: BitcoinNetwork> Address for BitcoinAddress<N> {
     type PrivateKey = BitcoinPrivateKey<N>;
     type PublicKey = BitcoinPublicKey<N>;
 
+    /// Returns the address corresponding to the given Bitcoin private key.
     fn from_private_key(
         private_key: &Self::PrivateKey,
         format: &Self::Format,
-    ) -> Result<Self, gyu_model::address::AddressError> {
+    ) -> Result<Self, AddressError> {
         let public_key = private_key.to_public_key();
         match format {
             BitcoinFormat::P2PKH => Self::p2pkh(&public_key),
@@ -47,7 +49,7 @@ impl<N: BitcoinNetwork> Address for BitcoinAddress<N> {
     fn from_public_key(
         public_key: &Self::PublicKey,
         format: &Self::Format,
-    ) -> Result<Self, gyu_model::address::AddressError> {
+    ) -> Result<Self, AddressError> {
         match format {
             BitcoinFormat::P2PKH => Self::p2pkh(public_key),
             BitcoinFormat::P2WSH => {
@@ -164,8 +166,9 @@ impl<N: BitcoinNetwork> BitcoinAddress<N> {
 
 impl<'a, N: BitcoinNetwork> TryFrom<&'a str> for BitcoinAddress<N> {
     type Error = AddressError;
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Self::from_str(value)
+
+    fn try_from(address: &'a str) -> Result<Self, Self::Error> {
+        Self::from_str(address)
     }
 }
 
@@ -176,6 +179,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinAddress<N> {
         if address.len() < 14 || address.len() > 74 {
             return Err(AddressError::InvalidCharacterLength(address.len()));
         }
+
         let prefix = &address.to_lowercase()[0..2];
 
         if let Ok(format) = BitcoinFormat::from_address_prefix(prefix.as_bytes()) {
@@ -188,6 +192,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinAddress<N> {
                 let data = bech32.data();
                 let version = data[0].to_u8();
                 let mut program = Vec::from_base32(&data[1..])?;
+
                 let mut data = vec![version, program.len() as u8];
                 data.append(&mut program);
 
@@ -207,6 +212,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinAddress<N> {
             return Err(AddressError::InvalidByteLength(data.len()));
         }
 
+        // Check that the address prefix corresponds to the correct network.
         let _ = N::from_address_prefix(&data[0..2])?;
         let format = BitcoinFormat::from_address_prefix(&data[0..2])?;
 
@@ -218,8 +224,8 @@ impl<N: BitcoinNetwork> FromStr for BitcoinAddress<N> {
     }
 }
 
-impl<N: BitcoinNetwork> Display for BitcoinAddress<N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<N: BitcoinNetwork> fmt::Display for BitcoinAddress<N> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.address)
     }
 }
