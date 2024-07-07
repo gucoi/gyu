@@ -14,11 +14,66 @@ pub fn variable_length_integer(value: u64) -> Result<Vec<u8>, TransactionError> 
     }
 }
 
-pub fn read_variable_lenth_integer<R: Read>(mut reader: R) -> Result<usize, TransactionError> {}
+pub fn read_variable_lenth_integer<R: Read>(mut reader: R) -> Result<usize, TransactionError> {
+    let mut flag = [0u8; 1];
+    reader.read(&mut flag)?;
+
+    match flag[0] {
+        0..=252 => Ok(flag[0] as usize),
+        0xfd => {
+            let mut size = [0u8; 2];
+            reader.read(&mut size)?;
+            match u16::from_le_bytes(size) {
+                s if s < 253 => {
+                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
+                }
+                s => Ok(s as usize),
+            }
+        }
+        0xfe => {
+            let mut size = [0u8; 4];
+            reader.read(&mut size)?;
+            match u32::from_le_bytes(size) {
+                s if s < 65536 => {
+                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
+                }
+                s => Ok(s as usize),
+            }
+        }
+        0xfe => {
+            let mut size = [0u8; 4];
+            reader.read(&mut size)?;
+            match u32::from_le_bytes(size) {
+                s if s < 65536 => {
+                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
+                }
+                s => Ok(s as usize),
+            }
+        }
+        _ => {
+            let mut size = [0u8; 8];
+            reader.read(&mut size)?;
+            match u64::from_le_bytes(size) {
+                s if s < 4294967296 => {
+                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
+                }
+                s => Ok(s as usize),
+            }
+        }
+    }
+}
 
 pub struct BitcoinVector;
 
-impl BitcoinVector {}
+impl BitcoinVector {
+    pub fn read<R: Read, E, F>(mut reader: R, func: F) -> Result<Vec<E>, TransactionError>
+    where
+        F: Fn(&mut R) -> Result<E, TransactionError>,
+    {
+        let count = read_variable_lenth_integer(reader)?;
+        (0..count).map(|_| func(&mut reader)).collect()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[allow(non_camel_case_types)]
