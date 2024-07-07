@@ -1,5 +1,5 @@
 use core::fmt;
-use std::fmt::write;
+use std::io;
 
 use gyu_model::no_std::io::Read;
 use gyu_model::transaction::TransactionError;
@@ -14,7 +14,7 @@ pub fn variable_length_integer(value: u64) -> Result<Vec<u8>, TransactionError> 
     }
 }
 
-pub fn read_variable_lenth_integer<R: Read>(mut reader: R) -> Result<usize, TransactionError> {
+pub fn read_variable_length_integer<R: Read>(mut reader: R) -> Result<usize, TransactionError> {
     let mut flag = [0u8; 1];
     reader.read(&mut flag)?;
 
@@ -70,8 +70,19 @@ impl BitcoinVector {
     where
         F: Fn(&mut R) -> Result<E, TransactionError>,
     {
-        let count = read_variable_lenth_integer(reader)?;
+        let count = read_variable_length_integer(&mut reader)?;
         (0..count).map(|_| func(&mut reader)).collect()
+    }
+
+    pub fn read_witness<R: Read, E, F>(
+        mut reader: R,
+        func: F,
+    ) -> Result<(usize, Result<Vec<E>, TransactionError>), TransactionError>
+    where
+        F: Fn(&mut R) -> Result<E, TransactionError>,
+    {
+        let count = read_variable_length_integer(&mut reader)?;
+        Ok((count, (0..count).map(|_| func(&mut reader)).collect()))
     }
 }
 
@@ -83,6 +94,12 @@ pub enum SignatureHash {
     SIG_NONE = 0x02,
 
     SIG_SINGLE = 0x03,
+
+    SIGHASH_ALL_SIGHASH_ANYONECANPAY = 0x81,
+
+    SIGHASH_NONE_SIGHASH_ANYONECANPAY = 0x82,
+
+    SIGHASH_SINGLE_SIGHASH_ANYONECANPAY = 0x83,
 }
 
 impl fmt::Display for SignatureHash {
@@ -91,6 +108,15 @@ impl fmt::Display for SignatureHash {
             SignatureHash::SIG_ALL => write!(f, "SIG_HASH"),
             SignatureHash::SIG_NONE => write!(f, "SIG_NONE"),
             SignatureHash::SIG_SINGLE => write!(f, "SIG_SINGLE"),
+            SignatureHash::SIGHASH_ALL_SIGHASH_ANYONECANPAY => {
+                write!(f, "SIGHASH_ALL | SIGHASH_ANYONECANPAY")
+            }
+            SignatureHash::SIGHASH_NONE_SIGHASH_ANYONECANPAY => {
+                write!(f, "SIGHASH_NONE | SIGHASH_ANYONECANPAY")
+            }
+            SignatureHash::SIGHASH_SINGLE_SIGHASH_ANYONECANPAY => {
+                write!(f, "SIGHASH_SINGLE | SIGHASH_ANYONECANPAY")
+            }
         }
     }
 }
@@ -101,7 +127,32 @@ impl SignatureHash {
             0x01 => SignatureHash::SIG_ALL,
             0x02 => SignatureHash::SIG_NONE,
             0x03 => SignatureHash::SIG_SINGLE,
+            0x81 => SignatureHash::SIGHASH_ALL_SIGHASH_ANYONECANPAY,
+            0x82 => SignatureHash::SIGHASH_NONE_SIGHASH_ANYONECANPAY,
+            0x83 => SignatureHash::SIGHASH_SINGLE_SIGHASH_ANYONECANPAY,
             _ => SignatureHash::SIG_ALL,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[allow(non_camel_case_types)]
+pub enum Opcode {
+    OP_DUP = 0x76,
+    OP_HASH160 = 0xa9,
+    OP_CHECKSIG = 0xac,
+    OP_EQUAL = 0x87,
+    OP_EQUALVERIFY = 0x88,
+}
+
+impl fmt::Display for Opcode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Opcode::OP_DUP => write!(f, "OP_DUP"),
+            Opcode::OP_HASH160 => write!(f, "OP_HASH160"),
+            Opcode::OP_CHECKSIG => write!(f, "OP_CHECKSIG"),
+            Opcode::OP_EQUAL => write!(f, "OP_EQUAL"),
+            Opcode::OP_EQUALVERIFY => write!(f, "OP_EQUALVERIFY"),
         }
     }
 }
