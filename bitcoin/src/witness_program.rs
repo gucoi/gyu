@@ -2,7 +2,6 @@ use failure::Fail;
 use gyu_model::address::AddressError;
 use gyu_model::no_std::*;
 use gyu_model::transaction::TransactionError;
-use std::net::IpAddr;
 use std::str::FromStr;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
