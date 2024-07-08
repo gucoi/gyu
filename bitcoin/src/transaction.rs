@@ -1,5 +1,7 @@
+use crate::address::BitcoinAddress;
+use crate::amount::BitcoinAmount;
+use crate::network::BitcoinNetwork;
 use core::fmt;
-use std::io;
 
 use gyu_model::no_std::io::Read;
 use gyu_model::transaction::TransactionError;
@@ -155,4 +157,14 @@ impl fmt::Display for Opcode {
             Opcode::OP_EQUALVERIFY => write!(f, "OP_EQUALVERIFY"),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Outpoint<N: BitcoinNetwork> {
+    pub reverse_transaction_id: Vec<u8>,
+    pub index: u32,
+    pub amount: Option<BitcoinAmount>,
+    pub script_pub_key: Option<Vec<u8>>,
+    pub redeem_script: Option<Vec<u8>>,
+    pub address: Option<BitcoinAddress<N>>,
 }
