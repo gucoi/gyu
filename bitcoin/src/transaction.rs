@@ -1,5 +1,6 @@
 use crate::address::BitcoinAddress;
 use crate::amount::BitcoinAmount;
+use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;
 use core::fmt;
 
@@ -167,4 +168,74 @@ pub struct Outpoint<N: BitcoinNetwork> {
     pub script_pub_key: Option<Vec<u8>>,
     pub redeem_script: Option<Vec<u8>>,
     pub address: Option<BitcoinAddress<N>>,
+}
+
+impl<N: BitcoinNetwork> Outpoint<N> {
+    pub fn new(
+        reverse_transaction_id: Vec<u8>,
+        index: u32,
+        address: Option<BitcoinAddress<N>>,
+        amount: Option<BitcoinAmount>,
+        redeem_script: Option<Vec<u8>>,
+        script_pub_key: Option<Vec<u8>>,
+    ) -> Result<Self, TransactionError> {
+        let (script_pub_key, redeem_script) = match address.clone() {
+            Some(address) => {
+                let script_pub_key =
+                    script_pub_key.unwrap_or(create_script_pub_key::<N>(&address)?);
+                let redeem_script = match address.format() {
+                    BitcoinFormat::P2PKH => match redeem_script {
+                        Some(_) => return Err(TransactionError::InvalidInputs("P2PKH".into())),
+                        None => match script_pub_key[0] != Opcode::OP_DUP as u8
+                            && script_pub_key[1] != Opcode::OP_HASH160 as u8
+                            && script_pub_key[script_pub_key.len() - 1] != Opcode::OP_CHECKSIG as u8
+                        {
+                            true => {
+                                return Err(TransactionError::InvalidScriptPubKey("P2PKH".into()))
+                            }
+                            false => None,
+                        },
+                    },
+                    BitcoinFormat::P2WSH => match redeem_script {
+                        Some(redeem_script) => match script_pub_key[0] != 0x00 as u8
+                            && script_pub_key[1] != 0x20 as u8 && script_pub_key.len() != 34 // zero [32-byte sha256(witness script)]
+                        {
+                            true => return Err(TransactionError::InvalidScriptPubKey("P2WSH".into())),
+                            false => Some(redeem_script),
+                        },
+                        None => return Err(TransactionError::InvalidInputs("P2WSH".into())),
+                    },
+                    BitcoinFormat::P2SH_P2WPKH => match redeem_script {
+                        Some(redeem_script) => match script_pub_key[0] != Opcode::OP_HASH160 as u8
+                            && script_pub_key[script_pub_key.len() - 1] != Opcode::OP_EQUAL as u8
+                        {
+                            true => {
+                                return Err(TransactionError::InvalidScriptPubKey(
+                                    "P2SH_P2WPKH".into(),
+                                ))
+                            }
+                            false => Some(redeem_script),
+                        },
+                        None => return Err(TransactionError::InvalidInputs("P2SH_P2WPKH".into())),
+                    },
+                    BitcoinFormat::Bech32 => match redeem_script.is_some() {
+                        true => return Err(TransactionError::InvalidInputs("Bech32".into())),
+                        false => None,
+                    },
+                };
+
+                (Some(script_pub_key), redeem_script)
+            }
+            None => (None, None),
+        };
+
+        Ok(Self {
+            reverse_transaction_id,
+            index,
+            amount,
+            redeem_script,
+            script_pub_key,
+            address,
+        })
+    }
 }
