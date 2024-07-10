@@ -239,3 +239,57 @@ impl<N: BitcoinNetwork> Outpoint<N> {
         })
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
+    pub outpoint: Outpoin<N>,
+    pub script_sig: Vec<u8>,
+    pub sequence: Vec<u8>,
+    pub sighash_code: SignatureHash,
+    pub witnesses: Vec<Vec<u8>>,
+    pub is_signed: bool,
+    pub additional_witness: Option<(Vec<u8>, bool)>,
+    pub witness_script_data: Option<Vec<u8>>,
+}
+
+impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
+    const DEFAULT_SEQUENCE: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
+
+    pub fn new(
+        transaction_id: Vec<u8>,
+        index: u32,
+        address: Option<BitcoinAddress<N>>,
+        amount: Option<BitcoinAmount>,
+        redeem_script: Option<Vec<u8>>,
+        script_pub_key: Option<Vec<u8>>,
+        sequence: Option<Vec<u8>>,
+        sighash: SignatureHash,
+    ) -> Result<Self, TransactionError> {
+        if transaction_id.len() != 32 {
+            return Err(TransactionError::InvalidTransactionId(transaction_id.len()));
+        }
+
+        let mut reverse_transaction_id = transaction_id;
+        reverse_transaction_id.reverse();
+
+        let outpoint = Outpoint::<N>::new(
+            reverse_transaction_id,
+            index,
+            address,
+            amount,
+            redeem_script,
+            script_pub_key,
+        )?;
+
+        Ok(Self {
+            outpoint,
+            script_sig: vec![],
+            sequence: sequence.unwrap_or(BitcoinTransactionInput::<N>::DEFAULT_SEQUENCE.to_vec()),
+            sighash_code: sighash,
+            witnesses: vec![],
+            is_signed: false,
+            additional_witness: None,
+            witness_script_data: None,
+        })
+    }
+}
