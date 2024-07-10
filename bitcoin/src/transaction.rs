@@ -242,7 +242,7 @@ impl<N: BitcoinNetwork> Outpoint<N> {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
-    pub outpoint: Outpoin<N>,
+    pub outpoint: Outpoint<N>,
     pub script_sig: Vec<u8>,
     pub sequence: Vec<u8>,
     pub sighash_code: SignatureHash,
