@@ -43,16 +43,6 @@ pub fn read_variable_length_integer<R: Read>(mut reader: R) -> Result<usize, Tra
                 s => Ok(s as usize),
             }
         }
-        0xfe => {
-            let mut size = [0u8; 4];
-            reader.read(&mut size)?;
-            match u32::from_le_bytes(size) {
-                s if s < 65536 => {
-                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
-                }
-                s => Ok(s as usize),
-            }
-        }
         _ => {
             let mut size = [0u8; 8];
             reader.read(&mut size)?;
@@ -237,5 +227,137 @@ impl<N: BitcoinNetwork> Outpoint<N> {
             script_pub_key,
             address,
         })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
+    pub outpoint: Outpoint<N>,
+    pub script_sig: Vec<u8>,
+    pub sequence: Vec<u8>,
+    pub sighash_code: SignatureHash,
+    pub witnesses: Vec<Vec<u8>>,
+    pub is_signed: bool,
+    pub additional_witness: Option<(Vec<u8>, bool)>,
+    pub witness_script_data: Option<Vec<u8>>,
+}
+
+impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
+    const DEFAULT_SEQUENCE: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
+
+    pub fn new(
+        transaction_id: Vec<u8>,
+        index: u32,
+        address: Option<BitcoinAddress<N>>,
+        amount: Option<BitcoinAmount>,
+        redeem_script: Option<Vec<u8>>,
+        script_pub_key: Option<Vec<u8>>,
+        sequence: Option<Vec<u8>>,
+        sighash: SignatureHash,
+    ) -> Result<Self, TransactionError> {
+        if transaction_id.len() != 32 {
+            return Err(TransactionError::InvalidTransactionId(transaction_id.len()));
+        }
+
+        let mut reverse_transaction_id = transaction_id;
+        reverse_transaction_id.reverse();
+
+        let outpoint = Outpoint::<N>::new(
+            reverse_transaction_id,
+            index,
+            address,
+            amount,
+            redeem_script,
+            script_pub_key,
+        )?;
+
+        Ok(Self {
+            outpoint,
+            script_sig: vec![],
+            sequence: sequence.unwrap_or(BitcoinTransactionInput::<N>::DEFAULT_SEQUENCE.to_vec()),
+            sighash_code: sighash,
+            witnesses: vec![],
+            is_signed: false,
+            additional_witness: None,
+            witness_script_data: None,
+        })
+    }
+
+    pub fn read<R: Read>(mut reader: &mut R) -> Result<Self, TransactionError> {
+        let mut transaction_hash = [0u8; 32];
+        let mut vin = [0u8; 4];
+        let mut sequence = [0u8; 4];
+
+        reader.read(&mut transaction_hash)?;
+        reader.read(&mut vin)?;
+
+        let outpoint = Outpoint::<N>::new(
+            transaction_hash.to_vec(),
+            u32::from_le_bytes(vin),
+            None,
+            None,
+            None,
+            None,
+        )?;
+
+        let script_sig: Vec<u8> = BitcoinVector::read(&mut reader, |s| {
+            let mut byte = [0u8; 1];
+            s.read(&mut byte)?;
+            Ok(byte[0])
+        })?;
+
+        reader.read(&mut sequence)?;
+
+        let script_sig_len = read_variable_length_integer(&script_sig[..])?;
+        let sighash_code = SignatureHash::from_byte(&match script_sig_len {
+            0 => 0x01,
+            length => script_sig[length],
+        });
+
+        Ok(Self {
+            outpoint,
+            script_sig: script_sig.to_vec(),
+            sequence: sequence.to_vec(),
+            sighash_code,
+            witnesses: vec![],
+            is_signed: script_sig.len() > 0,
+            additional_witness: None,
+            witness_script_data: None,
+        })
+    }
+    pub fn serialize(&self, raw: bool) -> Result<Vec<u8>, TransactionError> {
+        let mut input = vec![];
+        input.extend(&self.outpoint.reverse_transaction_id);
+        input.extend(&self.outpoint.index.to_le_bytes());
+
+        match raw {
+            true => input.extend(vec![0x00]),
+            false => match self.script_sig.len() {
+                0 => match &self.outpoint.address {
+                    Some(address) => match address.format() {
+                        BitcoinFormat::Bech32 => input.extend(vec![0x00]),
+                        BitcoinFormat::P2WSH => input.extend(vec![0x00]),
+                        _ => {
+                            let script_pub_key = match &self.outpoint.script_pub_key {
+                                Some(script) => script,
+                                None => {
+                                    return Err(TransactionError::MissingOutpointScriptPublicKey)
+                                }
+                            };
+                            input.extend(variable_length_integer(script_pub_key.len() as u64)?);
+                            input.extend(script_pub_key);
+                        }
+                    },
+                    None => input.extend(vec![0x00]),
+                },
+                _ => {
+                    input.extend(variable_length_integer(self.script_sig.len() as u64)?);
+                    input.extend(&self.script_sig);
+                }
+            },
+        };
+
+        input.extend(&self.sequence);
+        Ok(input)
     }
 }
