@@ -43,16 +43,6 @@ pub fn read_variable_length_integer<R: Read>(mut reader: R) -> Result<usize, Tra
                 s => Ok(s as usize),
             }
         }
-        0xfe => {
-            let mut size = [0u8; 4];
-            reader.read(&mut size)?;
-            match u32::from_le_bytes(size) {
-                s if s < 65536 => {
-                    return Err(TransactionError::InvalidVariableSizeInteger(s as usize))
-                }
-                s => Ok(s as usize),
-            }
-        }
         _ => {
             let mut size = [0u8; 8];
             reader.read(&mut size)?;
