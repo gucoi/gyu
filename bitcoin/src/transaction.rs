@@ -292,4 +292,82 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
             witness_script_data: None,
         })
     }
+
+    pub fn read<R: Read>(mut reader: &mut R) -> Result<Self, TransactionError> {
+        let mut transaction_hash = [0u8; 32];
+        let mut vin = [0u8; 4];
+        let mut sequence = [0u8; 4];
+
+        reader.read(&mut transaction_hash)?;
+        reader.read(&mut vin)?;
+
+        let outpoint = Outpoint::<N>::new(
+            transaction_hash.to_vec(),
+            u32::from_le_bytes(vin),
+            None,
+            None,
+            None,
+            None,
+        )?;
+
+        let script_sig: Vec<u8> = BitcoinVector::read(&mut reader, |s| {
+            let mut byte = [0u8; 1];
+            s.read(&mut byte)?;
+            Ok(byte[0])
+        })?;
+
+        reader.read(&mut sequence)?;
+
+        let script_sig_len = read_variable_length_integer(&script_sig[..])?;
+        let sighash_code = SignatureHash::from_byte(&match script_sig_len {
+            0 => 0x01,
+            length => script_sig[length],
+        });
+
+        Ok(Self {
+            outpoint,
+            script_sig: script_sig.to_vec(),
+            sequence: sequence.to_vec(),
+            sighash_code,
+            witnesses: vec![],
+            is_signed: script_sig.len() > 0,
+            additional_witness: None,
+            witness_script_data: None,
+        })
+    }
+    pub fn serialize(&self, raw: bool) -> Result<Vec<u8>, TransactionError> {
+        let mut input = vec![];
+        input.extend(&self.outpoint.reverse_transaction_id);
+        input.extend(&self.outpoint.index.to_le_bytes());
+
+        match raw {
+            true => input.extend(vec![0x00]),
+            false => match self.script_sig.len() {
+                0 => match &self.outpoint.address {
+                    Some(address) => match address.format() {
+                        BitcoinFormat::Bech32 => input.extend(vec![0x00]),
+                        BitcoinFormat::P2WSH => input.extend(vec![0x00]),
+                        _ => {
+                            let script_pub_key = match &self.outpoint.script_pub_key {
+                                Some(script) => script,
+                                None => {
+                                    return Err(TransactionError::MissingOutpointScriptPublicKey)
+                                }
+                            };
+                            input.extend(variable_length_integer(script_pub_key.len() as u64)?);
+                            input.extend(script_pub_key);
+                        }
+                    },
+                    None => input.extend(vec![0x00]),
+                },
+                _ => {
+                    input.extend(variable_length_integer(self.script_sig.len() as u64)?);
+                    input.extend(&self.script_sig);
+                }
+            },
+        };
+
+        input.extend(&self.sequence);
+        Ok(input)
+    }
 }
