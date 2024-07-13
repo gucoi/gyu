@@ -2,7 +2,12 @@ use crate::address::BitcoinAddress;
 use crate::amount::BitcoinAmount;
 use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;
+use crate::witness_program::WitnessProgram;
 use core::fmt;
+use std::str::FromStr;
+
+use base58::FromBase58;
+use bech32::{Bech32, FromBase32};
 
 use gyu_model::no_std::io::Read;
 use gyu_model::transaction::TransactionError;
@@ -76,6 +81,54 @@ impl BitcoinVector {
     {
         let count = read_variable_length_integer(&mut reader)?;
         Ok((count, (0..count).map(|_| func(&mut reader)).collect()))
+    }
+}
+
+pub fn create_script_pub_key<N: BitcoinNetwork>(
+    address: &BitcoinAddress<N>,
+) -> Result<Vec<u8>, TransactionError> {
+    match address.format() {
+        BitcoinFormat::P2PKH => {
+            let bytes = &address.to_string().from_base58()?;
+            let pub_key_hash = bytes[1..(bytes.len() - 4)].to_vec();
+
+            let mut script = vec![];
+            script.push(Opcode::OP_DUP as u8);
+            script.push(Opcode::OP_HASH160 as u8);
+            script.extend(variable_length_integer(pub_key_hash.len() as u64)?);
+            script.extend(pub_key_hash);
+            script.push(Opcode::OP_EQUALVERIFY as u8);
+            script.push(Opcode::OP_CHECKSIG as u8);
+            Ok(script)
+        }
+        BitcoinFormat::P2WSH => {
+            let bech32 = Bech32::from_str(&address.to_string())?;
+            let (v, script) = bech32.data().split_at(1);
+            let script = Vec::from_base32(script)?;
+            let mut script_bytes = vec![v[0].to_u8(), script.len() as u8];
+            script_bytes.extend(script);
+            Ok(script_bytes)
+        }
+        BitcoinFormat::P2SH_P2WPKH => {
+            let script_bytes = &address.to_string().from_base58()?;
+            let script_hash = script_bytes[1..(script_bytes.len() - 4)].to_vec();
+
+            let mut script = vec![];
+            script.push(Opcode::OP_HASH160 as u8);
+            script.extend(variable_length_integer(script_hash.len() as u64)?);
+            script.extend(script_hash);
+            script.push(Opcode::OP_EQUAL as u8);
+            Ok(script)
+        }
+        BitcoinFormat::Bech32 => {
+            let bech32 = Bech32::from_str(&address.to_string())?;
+            let (v, program) = bech32.data().split_at(1);
+            let program = Vec::from_base32(program)?;
+            let mut program_bytes = vec![v[0].to_u8(), program.len() as u8];
+            program_bytes.extend(program);
+
+            Ok(WitnessProgram::new(&program_bytes)?.to_scriptpubkey())
+        }
     }
 }
 
@@ -359,5 +412,23 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
 
         input.extend(&self.sequence);
         Ok(input)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionOutput {
+    pub amount: BitcoinAmount,
+    pub script_pub_key: Vec<u8>,
+}
+
+impl BitcoinTransactionOutput {
+    pub fn new<N: BitcoinNetwork>(
+        address: &BitcoinAddress<N>,
+        amount: BitcoinAmount,
+    ) -> Result<Self, TransactionError> {
+        Ok(Self {
+            amount,
+            script_pub_key: create_script_pub_key::<N>(address)?,
+        })
     }
 }
