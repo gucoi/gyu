@@ -11,6 +11,7 @@ use bech32::{Bech32, FromBase32};
 
 use gyu_model::no_std::io::Read;
 use gyu_model::transaction::TransactionError;
+use gyu_model::transaction::TransactionId;
 use serde::Serialize;
 
 pub fn variable_length_integer(value: u64) -> Result<Vec<u8>, TransactionError> {
@@ -431,4 +432,112 @@ impl BitcoinTransactionOutput {
             script_pub_key: create_script_pub_key::<N>(address)?,
         })
     }
+
+    pub fn read<R: Read>(mut reader: &mut R) -> Result<Self, TransactionError> {
+        let mut amount = [0u8; 8];
+        reader.read(&mut amount)?;
+
+        let script_pub_key: Vec<u8> = BitcoinVector::read(&mut reader, |s| {
+            let mut byte = [0u8; 1];
+            s.read(&mut byte)?;
+            Ok(byte[0])
+        })?;
+
+        Ok(Self {
+            amount: BitcoinAmount::from_satoshi(u64::from_le_bytes(amount) as i64)?,
+            script_pub_key,
+        })
+    }
+
+    pub fn serialize(&self) -> Result<Vec<u8>, TransactionError> {
+        let mut output = vec![];
+        output.extend(&self.amount.0.to_le_bytes());
+        output.extend(variable_length_integer(self.script_pub_key.len() as u64)?);
+        output.extend(&self.script_pub_key);
+        Ok(output)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionId {
+    txid: Vec<u8>,
+    wtxid: Vec<u8>,
+}
+
+impl TransactionId for BitcoinTransactionId {}
+impl fmt::Display for BitcoinTransactionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &hex::encode(&self.txid))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionParameters<N: BitcoinNetwork> {
+    pub version: u32,
+    pub inputs: Vec<BitcoinTransactionInput<N>>,
+    pub outputs: Vec<BitcoinTransactionOutput>,
+    pub lock_time: u32,
+    pub segwit_flag: bool,
+}
+
+impl<N: BitcoinNetwork> BitcoinTransactionParameters<N> {
+    pub fn read<R: Read>(mut reader: R) -> Result<Self, TransactionError> {
+        let mut version = [0u8; 4];
+        reader.read(&mut version)?;
+
+        let mut inputs = BitcoinVector::read(&mut reader, BitcoinTransactionInput::<N>::read)?;
+        let segwit_flag = match inputs.is_empty() {
+            true => {
+                let mut flag = [0u8; 1];
+                reader.read(&mut flag)?;
+                match flag[0] {
+                    1 => {
+                        inputs =
+                            BitcoinVector::read(&mut reader, BitcoinTransactionInput::<N>::read)?;
+                        true
+                    }
+                    _ => return Err(TransactionError::InvalidSegwitFlag(flag[0] as usize)),
+                }
+            }
+            false => false,
+        };
+
+        let outputs = BitcoinVector::read(&mut reader, BitcoinTransactionOutput::read)?;
+        if segwit_flag {
+            for input in &mut inputs {
+                let witness: Vec<Vec<u8>> = BitcoinVector::read(&mut reader, |s| {
+                    let (size, witness) = BitcoinVector::read_witness(s, |sr| {
+                        let mut byte = [0u8; 1];
+                        sr.read(&mut byte)?;
+                        Ok(byte[0])
+                    })?;
+                    Ok([variable_length_integer(size as u64)?, witness?].concat())
+                })?;
+                if witness.len() > 0 {
+                    input.sighash_code =
+                        SignatureHash::from_byte(&witness[0][&witness[0].len() - 1]);
+                    input.is_signed = true;
+                }
+                input.witnesses = witness;
+            }
+        }
+
+        let mut lock_time = [0u8; 4];
+        reader.read(&mut lock_time)?;
+
+        let transaction_parameters = BitcoinTransactionParameters::<N> {
+            version: u32::from_le_bytes(version),
+            inputs,
+            outputs,
+            lock_time: u32::from_le_bytes(lock_time),
+            segwit_flag,
+        };
+
+        Ok(transaction_parameters)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransaction<N: BitcoinNetwork> {
+    parameters: BitcoinTransactionParameters<N>,
 }
