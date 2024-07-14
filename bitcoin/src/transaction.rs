@@ -471,7 +471,7 @@ impl fmt::Display for BitcoinTransactionId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BitcoinTransactionParameters<N: BitcoinNetwork> {
     pub version: u32,
     pub inputs: Vec<BitcoinTransactionInput<N>>,
@@ -535,4 +535,9 @@ impl<N: BitcoinNetwork> BitcoinTransactionParameters<N> {
 
         Ok(transaction_parameters)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransaction<N: BitcoinNetwork> {
+    parameters: BitcoinTransactionParameters<N>,
 }
