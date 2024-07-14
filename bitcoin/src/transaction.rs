@@ -11,6 +11,7 @@ use bech32::{Bech32, FromBase32};
 
 use gyu_model::no_std::io::Read;
 use gyu_model::transaction::TransactionError;
+use gyu_model::transaction::TransactionId;
 use serde::Serialize;
 
 pub fn variable_length_integer(value: u64) -> Result<Vec<u8>, TransactionError> {
@@ -454,6 +455,19 @@ impl BitcoinTransactionOutput {
         output.extend(variable_length_integer(self.script_pub_key.len() as u64)?);
         output.extend(&self.script_pub_key);
         Ok(output)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BitcoinTransactionId {
+    txid: Vec<u8>,
+    wtxid: Vec<u8>,
+}
+
+impl TransactionId for BitcoinTransactionId {}
+impl fmt::Display for BitcoinTransactionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &hex::encode(&self.txid))
     }
 }
 
