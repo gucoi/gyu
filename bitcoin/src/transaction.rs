@@ -550,4 +550,9 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
     type TransactionId = BitcoinTransactionId;
     type TransactionParameters = BitcoinTransactionParameters<N>;
 
+    fn new(parameters: &Self::TransactionParameters) -> Result<Self, TransactionError> {
+        Ok(Self {
+            parameters: parameters.clone(),
+        })
+    }
 }
