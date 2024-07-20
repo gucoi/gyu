@@ -541,3 +541,13 @@ impl<N: BitcoinNetwork> BitcoinTransactionParameters<N> {
 pub struct BitcoinTransaction<N: BitcoinNetwork> {
     parameters: BitcoinTransactionParameters<N>,
 }
+
+impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
+    type Address = BitcoinAddress<N>;
+    type Format = BitcoinFormat;
+    type PrivateKey = BitcoinPrivateKey<N>;
+    type PublicKey = BitcoinPublicKey<N>;
+    type TransactionId = BitcoinTransactionId;
+    type TransactionParameters = BitcoinTransactionParameters<N>;
+
+}
