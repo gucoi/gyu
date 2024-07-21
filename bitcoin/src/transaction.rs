@@ -12,6 +12,7 @@ use base58::FromBase58;
 use bech32::{Bech32, FromBase32};
 
 use gyu_model::no_std::io::Read;
+use gyu_model::transaction::Transaction;
 use gyu_model::transaction::TransactionError;
 use gyu_model::transaction::TransactionId;
 use serde::Serialize;
