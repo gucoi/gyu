@@ -764,3 +764,5 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
         Ok(Self::TransactionId { txid, wtxid })
     }
 }
+
+impl<N: BitcoinNetwork> BitcoinTransaction<N> {}
