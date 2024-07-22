@@ -29,7 +29,7 @@ pub trait Transaction: 'static + Clone + Send + Sync {
 
     fn sign(&self, private_key: &Self::PrivateKey) -> Result<Self, TransactionError>;
 
-    fn from_transaction_bytes(private_key: &Self::PrivateKey) -> Result<Self, TransactionError>;
+    fn from_transaction_bytes(transaction: &Vec<u8>) -> Result<Self, TransactionError>;
 
     fn to_transaction_bytes(&self) -> Result<Vec<u8>, TransactionError>;
 
