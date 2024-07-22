@@ -16,6 +16,8 @@ use gyu_model::transaction::Transaction;
 use gyu_model::transaction::TransactionError;
 use gyu_model::transaction::TransactionId;
 use serde::Serialize;
+use sha2::Digest;
+use sha2::Sha256;
 
 pub fn variable_length_integer(value: u64) -> Result<Vec<u8>, TransactionError> {
     match value {
@@ -699,4 +701,68 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
         }
         Ok(transaction)
     }
+
+    fn from_transaction_bytes(transaction: &Vec<u8>) -> Result<Self, TransactionError> {
+        Ok(Self {
+            parameters: Self::TransactionParameters::read(&transaction[..])?,
+        })
+    }
+
+    fn to_transaction_bytes(&self) -> Result<Vec<u8>, TransactionError> {
+        let mut transaction = self.parameters.version.to_le_bytes().to_vec();
+
+        if self.parameters.segwit_flag {
+            transaction.extend(vec![0x00, 0x01]);
+        }
+
+        transaction.extend(variable_length_integer(self.parameters.inputs.len() as u64)?);
+
+        let mut has_witness = false;
+        for input in &self.parameters.inputs {
+            if !has_witness {
+                has_witness = input.witnesses.len() > 0;
+            }
+            transaction.extend(input.serialize(!input.is_signed)?);
+        }
+
+        transaction.extend(variable_length_integer(
+            self.parameters.outputs.len() as u64
+        )?);
+        for output in &self.parameters.outputs {
+            transaction.extend(output.serialize()?);
+        }
+
+        if has_witness {
+            for input in &self.parameters.inputs {
+                match input.witnesses.len() {
+                    0 => transaction.extend(vec![0x00]),
+                    _ => {
+                        transaction.extend(variable_length_integer(input.witnesses.len() as u64)?);
+                        for witness in &input.witnesses {
+                            transaction.extend(witness);
+                        }
+                    }
+                };
+            }
+        }
+
+        transaction.extend(&self.parameters.lock_time.to_le_bytes());
+        Ok(transaction)
+    }
+
+    fn to_transaction_id(&self) -> Result<Self::TransactionId, TransactionError> {
+        let mut txid = Sha256::digest(&Sha256::digest(
+            &self.to_transaction_bytes_without_witness()?,
+        ))
+        .to_vec();
+
+        let mut wtxid = Sha256::digest(&Sha256::digest(&self.to_transaction_bytes()?)).to_vec();
+
+        txid.reverse();
+        wtxid.reverse();
+
+        Ok(Self::TransactionId { txid, wtxid })
+    }
 }
+
+impl<N: BitcoinNetwork> BitcoinTransaction<N> {}
