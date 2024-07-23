@@ -6,6 +6,7 @@ use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use crate::witness_program::WitnessProgram;
 use core::fmt;
+use std::str::pattern::Pattern;
 use std::str::FromStr;
 
 use base58::FromBase58;
@@ -765,4 +766,143 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
     }
 }
 
-impl<N: BitcoinNetwork> BitcoinTransaction<N> {}
+impl<N: BitcoinNetwork> BitcoinTransaction<N> {
+    pub fn p2pkh_hash_preimage(
+        &self,
+        vin: usize,
+        sighash: SignatureHash,
+    ) -> Result<Vec<u8>, TransactionError> {
+        let mut preimage = self.parameters.version.to_le_bytes().to_vec();
+        preimage.extend(variable_length_integer(self.parameters.inputs.len() as u64)?);
+        for (index, input) in self.parameters.inputs.iter().enumerate() {
+            preimage.extend(input.serialize(index != vin)?);
+        }
+
+        preimage.extend(variable_length_integer(
+            self.parameters.outputs.len() as u64
+        )?);
+        for output in &self.parameters.outputs {
+            preimage.extend(output.serialize()?);
+        }
+        preimage.extend(&self.parameters.lock_time.to_le_bytes());
+        preimage.extend(&(sighash as u32).to_le_bytes());
+        Ok(preimage)
+    }
+
+    pub fn segwit_hash_preimage(
+        &self,
+        vin: usize,
+        sighash: SignatureHash,
+    ) -> Result<Vec<u8>, TransactionError> {
+        let mut prev_outputs = vec![];
+        let mut prev_sequences = vec![];
+        let mut outputs = vev![];
+
+        for input in &self.parameters.inputs {
+            prev_outputs.extend(&input.outpoint.reverse_transaction_id);
+            prev_outputs.extend(&input.outpoint.index.to_le_bytes());
+            prev_sequences.extend(&input.sequence);
+        }
+
+        for output in &self.parameters.outputs {
+            outputs.extend(&output.serialize()?);
+        }
+
+        let input = &self.parameters.inputs[vin];
+        let format = match &input.outpoint.address {
+            Some(address) => address.format(),
+            None => return Err(TransactionError::MissingOutpointAddress),
+        };
+        let script = match format {
+            BitcoinFormat::Bech32 => match &input.outpoint.script_pub_key {
+                Some(script) => script[1..].to_vec(),
+                None => return Err(TransactionError::MissingOutpointScriptPublicKey),
+            },
+            BitcoinFormat::P2SH_P2WPKH => match &input.outpoint.redeem_script {
+                Some(redeem_script) => redeem_script[1..].to_vec(),
+                None => return Err(TransactionError::InvalidInputs("P2SH_P2WPKH".into())),
+            },
+            BitcoinFormat::P2PKH => {
+                return Err(TransactionError::UnsupportedPreimage("P2PKH".into()))
+            }
+        };
+
+        let mut script_code = vec![];
+        if format == BitcoinFormat::P2WSH {
+            script_code.extend(script);
+        } else {
+            script_code.push(Opcode::OP_DUP as u8);
+            script_code.push(Opcode::OP_HASH160 as u8);
+            script_code.extend(script);
+            script_code.push(Opcode::OP_EQUALVERIFY as u8);
+            script_code.push(Opcode::OP_CHECKSIG as u8);
+        }
+        let script_code = [
+            variable_length_integer(script_code.len() as u64)?,
+            script_code,
+        ]
+        .concat();
+        let hash_prev_outputs = Sha256::digest(&Sha256::digest(&prev_outputs));
+        let hash_sequence = Sha256::digest(&Sha256::digest(&prev_sequences));
+        let hash_outputs = Sha256::digest(&Sha256::digest(&outputs));
+        let outpoint_amount = match &input.outpoint.amount {
+            Some(amount) => amount.0.to_le_bytes(),
+            None => return Err(TransactionError::MissingOutpointAmount),
+        };
+        let mut preimage = vec![];
+        preimage.extend(&self.parameters.version.to_le_bytes());
+        preimage.extend(hash_prev_outputs);
+        preimage.extend(hash_sequence);
+        preimage.extend(&input.outpoint.reverse_transaction_id);
+        preimage.extend(&input.outpoint.index.to_le_bytes());
+        preimage.extend(&script_code);
+        preimage.extend(&outpoint_amount);
+        preimage.extend(&input.sequence);
+        preimage.extend(hash_outputs);
+        preimage.extend(&self.parameters.lock_time.to_le_bytes());
+        preimage.extend(&(sighash as u32).to_le_bytes());
+
+        Ok(preimage)
+    }
+
+    fn to_transaction_bytes_without_witness(&self) -> Result<Vec<u8>, TransactionError> {
+        let mut transaction = self.parameters.version.to_le_bytes().to_vec();
+
+        transaction.extend(variable_length_integer(self.parameters.inputs.len() as u64)?);
+        for input in &self.parameters.inputs {
+            transaction.extend(input.serialize(false)?);
+        }
+
+        transaction.extend(variable_length_integer(
+            self.parameters.outputs.len() as u64
+        )?);
+        for output in &self.parameters.outputs {
+            transaction.extend(output.serialize()?);
+        }
+
+        transaction.extend(&self.parameters.lock_time.to_le_bytes());
+
+        Ok(transaction)
+    }
+
+    #[allow(dead_code)]
+    pub fn update_outpoint(&self, outpoint: Outpoint<N>) -> Self {
+        let mut new_transaction = self.clone();
+        for (vin, input) in self.parameters.inputs.iter().enumerate() {
+            if &outpoint.reverse_transaction_id == &input.outpoint.reverse_transaction_id
+                && &outpoint.index == &input.outpoint.index
+            {
+                new_transaction.parameters.inputs[vin].outpoint = outpoint.clone();
+            }
+        }
+        new_transaction
+    }
+}
+
+impl<N: BitcoinNetwork> FromStr for BitcoinTransaction<N> {
+    type Err = TransactionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_transaction_bytes(&hex::decode(s)?)
+    }
+}
