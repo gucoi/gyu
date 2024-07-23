@@ -864,4 +864,24 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
 
         Ok(preimage)
     }
+
+    fn to_transaction_bytes_without_witness(&self) -> Result<Vec<u8>, TransactionError> {
+        let mut transaction = self.parameters.version.to_le_bytes().to_vec();
+
+        transaction.extend(variable_length_integer(self.parameters.inputs.len() as u64)?);
+        for input in &self.parameters.inputs {
+            transaction.extend(input.serialize(false)?);
+        }
+
+        transaction.extend(variable_length_integer(
+            self.parameters.outputs.len() as u64
+        )?);
+        for output in &self.parameters.outputs {
+            transaction.extend(output.serialize()?);
+        }
+
+        transaction.extend(&self.parameters.lock_time.to_le_bytes());
+
+        Ok(transaction)
+    }
 }
