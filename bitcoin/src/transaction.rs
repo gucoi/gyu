@@ -884,4 +884,17 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
 
         Ok(transaction)
     }
+
+    #[allow(dead_code)]
+    pub fn update_outpoint(&self, outpoint: Outpoint<N>) -> Self {
+        let mut new_transaction = self.clone();
+        for (vin, input) in self.parameters.inputs.iter().enumerate() {
+            if &outpoint.reverse_transaction_id == &input.outpoint.reverse_transaction_id
+                && &outpoint.index == &input.outpoint.index
+            {
+                new_transaction.parameters.inputs[vin].outpoint = outpoint.clone();
+            }
+        }
+        new_transaction
+    }
 }
