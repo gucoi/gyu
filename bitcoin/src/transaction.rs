@@ -898,3 +898,11 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
         new_transaction
     }
 }
+
+impl<N: BitcoinNetwork> FromStr for BitcoinTransaction<N> {
+    type Err = TransactionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_transaction_bytes(&hex::decode(s)?)
+    }
+}
