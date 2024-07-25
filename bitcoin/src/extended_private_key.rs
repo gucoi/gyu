@@ -1,4 +1,7 @@
-use gyu_model::{derivation_path::ChildIndex, extended_private_key::ExtendedPrivateKey};
+use gyu_model::{
+    derivation_path::ChildIndex,
+    extended_private_key::{self, ExtendedPrivateKey, ExtendedPrivateKeyError},
+};
 
 use crate::{
     address::BitcoinAddress, format::BitcoinFormat, network::BitcoinNetwork,
@@ -58,5 +61,66 @@ impl<N: BitcoinNetwork> ExtendedPrivateKey for BitcoinExtendedPrivateKey<N> {
             chain_code,
             private_key,
         })
+    }
+
+    fn derive(
+        &self,
+        path: &Self::DerivationPath,
+    ) -> Result<Self, gyu_model::extended_private_key::ExtendedPrivateKeyError> {
+        if self.depth == 255 {
+            return Err(ExtendedPrivateKeyError::MaximumChildDepthReached(
+                self.depth,
+            ));
+        }
+
+        let mut extended_private_key = self.clone();
+
+        for index in path.to_vec()?.into_iter() {
+            let public_key = &PublicKey::from_secret_key(
+                &extended_private_key.private_key.to_secp256k1_secret_key(),
+            )
+            .serialize_compressed()[..];
+            let mut mac = HmacSha512::new_varkey(&extended_private_key.chain_code)?;
+            match index {
+                ChildIndex::Normal(_) => mac.input(public_key),
+                ChildIndex::Hardened(_) => {
+                    mac.input(&[0u8]);
+                    mac.input(
+                        &extended_private_key
+                            .private_key
+                            .to_secp256k1_secret_key()
+                            .serialize(),
+                    );
+                }
+            }
+            mac.input(&u32::from(index).to_be_bytes());
+            let hmac = mac.result().code();
+
+            let mut secret_key = SecretKey::parse_slice(&hmac[0..32])?;
+            secret_key
+                .tweak_add_assign(&extended_private_key.private_key.to_secp256k1_secret_key())?;
+            let private_key = Self::PrivateKey::from_secp256k1_secret_key(&secret_key, true);
+
+            let mut chain_code = [0u8; 32];
+            chain_code[0..32].copy_from_slice(&hmac[32..]);
+
+            let mut parent_fingerprint = [0u8; 4];
+            parent_fingerprint.copy_from_slice(&hash160(public_key)[0..4]);
+
+            let format = match path {
+                BitcoinDerivationPath::BIP49(_) => BitcoinFormat::P2SH_P2WPKH,
+                _ => extended_private_key.format.clone(),
+            };
+
+            extended_private_key = Self {
+                format,
+                depth: extended_private_key.depth + 1,
+                parent_fingerprint,
+                child_index: index,
+                chain_code,
+                private_key,
+            }
+        }
+        Ok(extended_private_key)
     }
 }
