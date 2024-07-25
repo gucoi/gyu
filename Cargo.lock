@@ -71,6 +71,7 @@ dependencies = [
  "failure",
  "gyu-model",
  "hex",
+ "hmac",
  "libsecp256k1",
  "pbkdf2",
  "rand",
