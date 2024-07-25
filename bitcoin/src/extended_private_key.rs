@@ -1,6 +1,7 @@
 use gyu_model::{
     derivation_path::ChildIndex,
     extended_private_key::{self, ExtendedPrivateKey, ExtendedPrivateKeyError},
+    private_key::PrivateKey,
 };
 
 use crate::{
@@ -122,5 +123,24 @@ impl<N: BitcoinNetwork> ExtendedPrivateKey for BitcoinExtendedPrivateKey<N> {
             }
         }
         Ok(extended_private_key)
+    }
+
+    fn to_extended_public_key(&self) -> Self::ExtendedPublicKey {
+        Self::ExtendedPublicKey::from_extended_private_key(&self)
+    }
+
+    fn to_private_key(&self) -> Self::PrivateKey {
+        self.private_key.clone()
+    }
+
+    fn to_public_key(&self) -> Self::PublicKey {
+        self.private_key.to_public_key()
+    }
+
+    fn to_address(
+        &self,
+        format: &Self::Format,
+    ) -> Result<Self::Address, gyu_model::address::AddressError> {
+        self.private_key.to_address(format)
     }
 }
