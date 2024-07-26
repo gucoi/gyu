@@ -37,6 +37,9 @@ pub enum ExtendedPublicKeyError {
     #[fail(display = "{}", _0)]
     DerivationPathError(DerivationPathError),
 
+    #[fail(display = "invalid byte length: {}", _0)]
+    InvalidByteLength(usize),
+
     #[fail(
         display = "invalid extended private key checksum: {{ expected: {:?}, found: {:?} }}",
         _0, _1
