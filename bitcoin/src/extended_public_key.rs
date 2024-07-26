@@ -2,6 +2,7 @@ use gyu_model::{
     derivation_path::ChildIndex,
     extended_private_key::ExtendedPrivateKey,
     extended_public_key::{ExtendedPublicKey, ExtendedPublicKeyError},
+    public_key::PublicKey,
 };
 use hmac::{Hmac, Mac};
 use sha2::Sha512;
@@ -92,5 +93,16 @@ impl<N: BitcoinNetwork> ExtendedPublicKey for BitcoinExtendedPublicKey<N> {
         }
 
         Ok(extended_public_key)
+    }
+
+    fn to_public_key(&self) -> Self::PublicKey {
+        self.public_key.clone()
+    }
+
+    fn to_address(
+        &self,
+        format: &Self::Format,
+    ) -> Result<Self::Address, gyu_model::address::AddressError> {
+        self.public_key.to_address(format)
     }
 }
