@@ -1,6 +1,7 @@
 pub mod address;
 pub mod amount;
 pub mod extended_private_key;
+pub mod extended_public_key;
 pub mod format;
 pub mod network;
 pub mod private_key;
