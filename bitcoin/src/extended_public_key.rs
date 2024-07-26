@@ -1,10 +1,16 @@
+use std::str::FromStr;
+
+use base58::{FromBase58, ToBase58};
 use gyu_model::{
     derivation_path::ChildIndex,
     extended_private_key::ExtendedPrivateKey,
     extended_public_key::{ExtendedPublicKey, ExtendedPublicKeyError},
     public_key::PublicKey,
+    utilities::crypto::{checksum, hash160},
 };
+
 use hmac::{Hmac, Mac};
+use secp256k1::{PublicKey as Secp256k1_PublicKey, SecretKey};
 use sha2::Sha512;
 
 use crate::{
@@ -104,5 +110,55 @@ impl<N: BitcoinNetwork> ExtendedPublicKey for BitcoinExtendedPublicKey<N> {
         format: &Self::Format,
     ) -> Result<Self::Address, gyu_model::address::AddressError> {
         self.public_key.to_address(format)
+    }
+}
+
+impl<N: BitcoinNetwork> BitcoinExtendedPublicKey<N> {
+    pub fn format(&self) -> BitcoinFormat {
+        self.format.clone()
+    }
+}
+
+impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
+    type Err = ExtendedPublicKeyError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let data = s.from_base58()?;
+        if data.len() != 82 {
+            return Err(ExtendedPublicKeyError::InvalidByteLength(data.len()));
+        }
+
+        let _ = N::from_extended_public_key_version_bytes(&data[0..4])?;
+        let format = BitcoinFormat::from_exteded_private_key_version_bytes(&data[0..4])?;
+
+        let mut version = [0u8; 4];
+        version.copy_from_slice(&data[0..4]);
+        let depth = data[4];
+        let mut parent_fingerprint = [0u8; 4];
+        parent_fingerprint.copy_from_slice(&data[5..9]);
+
+        let child_index = ChildIndex::from(u32::from_be_bytes(<[u8; 4]>::try_from(&data[9..13])?));
+
+        let mut chain_code = [0u8; 32];
+        chain_code.copy_from_slice(&data[13..45]);
+
+        let secp256k1_public_key = Secp256k1_PublicKey::parse_slice(&data[45..78], None)?;
+        let public_key = BitcoinPublicKey::from_secp256k1_public_key(secp256k1_public_key, true);
+
+        let expected = &data[78..82];
+        let checksum = &checksum(&data[0..78])[0..4];
+        if *expected != *checksum {
+            let expected = expected.to_base58();
+            let found = checksum.to_base58();
+            return Err(ExtendedPublicKeyError::InvalidChecksum(expected, found));
+        }
+
+        Ok(Self {
+            format,
+            depth,
+            parent_fingerprint,
+            child_index,
+            chain_code,
+            public_key,
+        })
     }
 }
