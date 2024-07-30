@@ -4,6 +4,7 @@ pub mod derivation_path;
 pub mod extended_private_key;
 pub mod extended_public_key;
 pub mod format;
+pub mod mnemonic;
 pub mod network;
 pub mod private_key;
 pub mod public_key;
