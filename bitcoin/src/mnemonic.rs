@@ -3,7 +3,9 @@ use std::marker::PhantomData;
 use bitvec::order::Msb0;
 use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtend};
 use gyu_model::wordlist::Wordlist;
+use hmac::Hmac;
 use rand::Rng;
+use sha2::Sha512;
 
 use crate::address::BitcoinAddress;
 use crate::format::BitcoinFormat;
@@ -11,8 +13,11 @@ use crate::network::BitcoinNetwork;
 use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use bitvec::prelude::*;
+use pbkdf2::pbkdf2;
 
 pub trait BitcoinWordlist: Wordlist {}
+const PBKDF2_ROUNDS: usize = 64;
+const PBKDF2_BYTES: usize = 2048;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BitcoinMnemonic<N: BitcoinNetwork, W: BitcoinWordlist> {
@@ -91,7 +96,46 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> Mnemonic for BitcoinMnemonic<N, W> {
         }
     }
 
-    fn to_phrase(&self) -> Result<String, MnemonicError> {}
+    fn to_phrase(&self) -> Result<String, MnemonicError> {
+        let length: i32 = match self.entropy.len() {
+            16 => 12,
+            20 => 15,
+            24 => 18,
+            28 => 21,
+            32 => 24,
+            entropy_len => return Err(MnemonicError::InvalidEntropyLength(entropy_len)),
+        };
+
+        // Compute the checksum by taking the first ENT / 32 bits of the SHA256 hash
+        let mut sha256 = Sha256::new();
+        sha256.input(self.entropy.as_slice());
+
+        let hash = sha256.result();
+        let hash_0 = BitVec::<Msb0, u8>::from_element(hash[0]);
+        let (checksum, _) = hash_0.split_at(length.div(3) as usize);
+
+        // Convert the entropy bytes into bits and append the checksum
+        let mut encoding = BitVec::<Msb0, u8>::from_vec(self.entropy.clone());
+        encoding.append(&mut checksum.to_vec());
+
+        // Compute the phrase in 11 bit chunks which encode an index into the word list
+        let wordlist = W::get_all();
+        let phrase = encoding
+            .chunks(11)
+            .map(|index| {
+                // Convert a vector of 11 bits into a u11 number.
+                let index = index
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &bit)| (bit as u16) * 2u16.pow(10 - i as u32))
+                    .sum::<u16>();
+
+                wordlist[index as usize]
+            })
+            .collect::<Vec<&str>>();
+
+        Ok(phrase.join(" "))
+    }
 
     fn to_private_key(&self, password: Option<&str>) -> Result<Self::PrivateKey, MnemonicError> {
         Ok(self.to_extended_private_key(password)?.to_private_key())
@@ -107,5 +151,23 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> Mnemonic for BitcoinMnemonic<N, W> {
         format: &Self::Format,
     ) -> Result<Self::Address, MnemonicError> {
         Ok(self.to_extended_private_key(password)?.to_address(format)?)
+    }
+}
+
+impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
+    pub fn verify_phrase(phrase: &str) -> bool {
+        Self::from_phrase(phrase).is_ok()
+    }
+
+    fn to_seed(&self, password: Option<&str>) -> Result<Vec<u8>, MnemonicError> {
+        let mut seed = vec![0u8; PBKDF2_BYTES];
+        let salt = format!("mnemonic{}", password.unwrap_or(""));
+        pbkdf2::<Hmac<Sha512>>(
+            &self.to_phrase()?.as_bytes(),
+            salt.as_bytes(),
+            PBKDF2_ROUNDS,
+            &mut seed,
+        );
+        Ok(seed)
     }
 }
