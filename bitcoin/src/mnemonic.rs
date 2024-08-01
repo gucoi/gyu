@@ -3,7 +3,9 @@ use std::marker::PhantomData;
 use bitvec::order::Msb0;
 use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtend};
 use gyu_model::wordlist::Wordlist;
+use hmac::Hmac;
 use rand::Rng;
+use sha2::Sha512;
 
 use crate::address::BitcoinAddress;
 use crate::format::BitcoinFormat;
@@ -11,8 +13,11 @@ use crate::network::BitcoinNetwork;
 use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use bitvec::prelude::*;
+use pbkdf2::pbkdf2;
 
 pub trait BitcoinWordlist: Wordlist {}
+const PBKDF2_ROUNDS: usize = 64;
+const PBKDF2_BYTES: usize = 2048;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BitcoinMnemonic<N: BitcoinNetwork, W: BitcoinWordlist> {
@@ -146,5 +151,23 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> Mnemonic for BitcoinMnemonic<N, W> {
         format: &Self::Format,
     ) -> Result<Self::Address, MnemonicError> {
         Ok(self.to_extended_private_key(password)?.to_address(format)?)
+    }
+}
+
+impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
+    pub fn verify_phrase(phrase: &str) -> bool {
+        Self::from_phrase(phrase).is_ok()
+    }
+
+    fn to_seed(&self, password: Option<&str>) -> Result<Vec<u8>, MnemonicError> {
+        let mut seed = vec![0u8; PBKDF2_BYTES];
+        let salt = format!("mnemonic{}", password.unwrap_or(""));
+        pbkdf2::<Hmac<Sha512>>(
+            &self.to_phrase()?.as_bytes(),
+            salt.as_bytes(),
+            PBKDF2_ROUNDS,
+            &mut seed,
+        );
+        Ok(seed)
     }
 }
