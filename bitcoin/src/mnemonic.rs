@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use bitvec::order::Msb0;
 use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtend};
@@ -169,5 +170,11 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
             &mut seed,
         );
         Ok(seed)
+    }
+}
+impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
+    type Err = MnemonicError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_phrase(s)
     }
 }
