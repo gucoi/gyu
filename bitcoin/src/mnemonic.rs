@@ -1,3 +1,4 @@
+use core::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
@@ -176,5 +177,18 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
     type Err = MnemonicError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::from_phrase(s)
+    }
+}
+
+impl<N: BitcoinNetwork, W: BitcoinWordlist> fmt::Display for BitcoinMnemonic<N, W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.to_phrase() {
+                Ok(phrase) => phrase,
+                _ => return Err(fmt::Error),
+            }
+        )
     }
 }
