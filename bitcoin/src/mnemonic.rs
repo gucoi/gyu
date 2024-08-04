@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use bitvec::order::Msb0;
-use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtend};
-use gyu_model::wordlist::Wordlist;
+use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError};
 use hmac::Hmac;
 use rand::Rng;
 use sha2::Sha512;
@@ -14,10 +13,10 @@ use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;
 use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
+use crate::wordlist::BitcoinWordlist;
 use bitvec::prelude::*;
 use pbkdf2::pbkdf2;
 
-pub trait BitcoinWordlist: Wordlist {}
 const PBKDF2_ROUNDS: usize = 64;
 const PBKDF2_BYTES: usize = 2048;
 
