@@ -1,8 +1,9 @@
+use core::fmt;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use bitvec::order::Msb0;
-use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtend};
-use gyu_model::wordlist::Wordlist;
+use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError};
 use hmac::Hmac;
 use rand::Rng;
 use sha2::Sha512;
@@ -12,10 +13,10 @@ use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;
 use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
+use crate::wordlist::BitcoinWordlist;
 use bitvec::prelude::*;
 use pbkdf2::pbkdf2;
 
-pub trait BitcoinWordlist: Wordlist {}
 const PBKDF2_ROUNDS: usize = 64;
 const PBKDF2_BYTES: usize = 2048;
 
@@ -169,5 +170,24 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
             &mut seed,
         );
         Ok(seed)
+    }
+}
+impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
+    type Err = MnemonicError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_phrase(s)
+    }
+}
+
+impl<N: BitcoinNetwork, W: BitcoinWordlist> fmt::Display for BitcoinMnemonic<N, W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self.to_phrase() {
+                Ok(phrase) => phrase,
+                _ => return Err(fmt::Error),
+            }
+        )
     }
 }
