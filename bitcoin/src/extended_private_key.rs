@@ -1,15 +1,16 @@
 use gyu_model::{
     derivation_path::ChildIndex,
-    extended_private_key::{self, ExtendedPrivateKey, ExtendedPrivateKeyError},
+    extended_private_key::{ExtendedPrivateKey, ExtendedPrivateKeyError},
     private_key::PrivateKey,
     utilities::crypto::checksum,
+    utilities::crypto::hash160,
 };
 
 use std::str::FromStr;
 
 use crate::{
-    address::BitcoinAddress, format::BitcoinFormat, network::BitcoinNetwork,
-    private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
+    address::BitcoinAddress, derivation_path::BitcoinDerivationPath, format::BitcoinFormat,
+    network::BitcoinNetwork, private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
 };
 
 use base58::{FromBase58, ToBase58};

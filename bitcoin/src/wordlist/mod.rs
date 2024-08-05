@@ -4,6 +4,8 @@ use gyu_model::wordlist::{Wordlist, WordlistError};
 pub mod chinese_simplified;
 pub mod chinese_traditional;
 
+pub mod english;
+
 pub trait BitcoinWordlist: Wordlist {
     const WORDLIST: &'static str;
 
