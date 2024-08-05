@@ -813,10 +813,15 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
             Some(address) => address.format(),
             None => return Err(TransactionError::MissingOutpointAddress),
         };
+
         let script = match format {
             BitcoinFormat::Bech32 => match &input.outpoint.script_pub_key {
                 Some(script) => script[1..].to_vec(),
                 None => return Err(TransactionError::MissingOutpointScriptPublicKey),
+            },
+            BitcoinFormat::P2WSH => match &input.outpoint.redeem_script {
+                Some(redeem_script) => redeem_script.to_vec(),
+                None => return Err(TransactionError::InvalidInputs("P2WSH".into())),
             },
             BitcoinFormat::P2SH_P2WPKH => match &input.outpoint.redeem_script {
                 Some(redeem_script) => redeem_script[1..].to_vec(),

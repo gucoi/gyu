@@ -15,7 +15,7 @@ pub trait ExtendedPublicKey:
     Clone + Debug + Display + FromStr + Send + Sync + 'static + Eq + Sized
 {
     type Address: Address;
-    type DerivatingPath: DerivationPath;
+    type DerivationPath: DerivationPath;
     type ExtendedPrivateKey: ExtendedPrivateKey;
     type Format: Format;
     type PublicKey: PublicKey;

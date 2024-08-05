@@ -14,9 +14,11 @@ use secp256k1::{PublicKey as Secp256k1_PublicKey, SecretKey};
 use sha2::Sha512;
 
 use crate::{
-    address::BitcoinAddress, extended_private_key::BitcoinExtendedPrivateKey,
-    format::BitcoinFormat, network::BitcoinNetwork, public_key::BitcoinPublicKey,
+    address::BitcoinAddress, derivation_path::BitcoinDerivationPath,
+    extended_private_key::BitcoinExtendedPrivateKey, format::BitcoinFormat,
+    network::BitcoinNetwork, public_key::BitcoinPublicKey,
 };
+
 type HmacSha512 = Hmac<Sha512>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
