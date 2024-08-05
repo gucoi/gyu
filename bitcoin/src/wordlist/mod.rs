@@ -1,8 +1,7 @@
-use bitvec::vec::BitVec;
 use gyu_model::no_std::*;
 use gyu_model::wordlist::{Wordlist, WordlistError};
+
 pub mod chinese_simplified;
-pub use self::chinese_simplified::*;
 
 pub trait BitcoinWordlist: Wordlist {
     const WORDLIST: &'static str;
