@@ -9,8 +9,9 @@ use gyu_model::{
 use std::str::FromStr;
 
 use crate::{
-    address::BitcoinAddress, derivation_path::BitcoinDerivationPath, format::BitcoinFormat,
-    network::BitcoinNetwork, private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
+    address::BitcoinAddress, derivation_path::BitcoinDerivationPath,
+    extended_public_key::BitcoinExtendedPublicKey, format::BitcoinFormat, network::BitcoinNetwork,
+    private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
 };
 
 use base58::{FromBase58, ToBase58};

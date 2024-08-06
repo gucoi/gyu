@@ -1,3 +1,4 @@
+use core::fmt;
 use std::str::FromStr;
 
 use base58::{FromBase58, ToBase58};
@@ -162,5 +163,32 @@ impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
             chain_code,
             public_key,
         })
+    }
+}
+
+impl<N: BitcoinNetwork> fmt::Display for BitcoinExtendedPublicKey<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut result = [0u8; 82];
+        result[0..4].copy_from_slice(
+            match &N::to_extended_public_key_version_bytes(&self.format) {
+                Ok(version) => version,
+                Err(_) => return Err(fmt::Error),
+            },
+        );
+        result[4] = self.depth;
+        result[5..9].copy_from_slice(&self.parent_fingerprint[..]);
+        result[9..13].copy_from_slice(&u32::from(self.child_index).to_be_bytes());
+        result[13..45].copy_from_slice(&self.chain_code[..]);
+        result[45..78].copy_from_slice(
+            &self
+                .public_key
+                .to_secp256k1_public_key()
+                .serialize_compressed()[..],
+        );
+
+        let sum = &checksum(&result[0..78])[0..4];
+        result[78..82].copy_from_slice(sum);
+
+        fmt.write_str(&result.to_base58())
     }
 }

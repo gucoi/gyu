@@ -796,7 +796,7 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
     ) -> Result<Vec<u8>, TransactionError> {
         let mut prev_outputs = vec![];
         let mut prev_sequences = vec![];
-        let mut outputs = vev![];
+        let mut outputs = vec![];
 
         for input in &self.parameters.inputs {
             prev_outputs.extend(&input.outpoint.reverse_transaction_id);
