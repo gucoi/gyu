@@ -6,13 +6,13 @@ use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use crate::witness_program::WitnessProgram;
 use core::fmt;
-use std::str::pattern::Pattern;
 use std::str::FromStr;
 
 use base58::FromBase58;
 use bech32::{Bech32, FromBase32};
 
 use gyu_model::no_std::io::Read;
+use gyu_model::private_key::PrivateKey;
 use gyu_model::transaction::Transaction;
 use gyu_model::transaction::TransactionError;
 use gyu_model::transaction::TransactionId;

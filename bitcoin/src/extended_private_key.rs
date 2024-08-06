@@ -1,6 +1,7 @@
 use gyu_model::{
-    derivation_path::ChildIndex,
+    derivation_path::{ChildIndex, DerivationPath},
     extended_private_key::{ExtendedPrivateKey, ExtendedPrivateKeyError},
+    extended_public_key::ExtendedPublicKey,
     private_key::PrivateKey,
     utilities::crypto::checksum,
     utilities::crypto::hash160,
@@ -44,6 +45,7 @@ impl<N: BitcoinNetwork> ExtendedPrivateKey for BitcoinExtendedPrivateKey<N> {
     fn new(
         seed: &[u8],
         format: &Self::Format,
+        path: &Self::DerivationPath,
     ) -> Result<Self, gyu_model::extended_private_key::ExtendedPrivateKeyError> {
         Ok(Self::new_master(seed, format)?.derive(path)?)
     }

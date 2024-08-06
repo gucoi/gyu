@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use base58::{FromBase58, ToBase58};
 use gyu_model::{
-    derivation_path::ChildIndex,
+    derivation_path::{ChildIndex, DerivationPath},
     extended_private_key::ExtendedPrivateKey,
     extended_public_key::{ExtendedPublicKey, ExtendedPublicKeyError},
     public_key::PublicKey,
@@ -52,7 +52,7 @@ impl<N: BitcoinNetwork> ExtendedPublicKey for BitcoinExtendedPublicKey<N> {
 
     fn derive(
         &self,
-        path: &Self::DerivatingPath,
+        path: &Self::DerivationPath,
     ) -> Result<Self, gyu_model::extended_public_key::ExtendedPublicKeyError> {
         if self.depth == 255 {
             return Err(ExtendedPublicKeyError::MaximumChildDepthReached(self.depth));
@@ -131,7 +131,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
         }
 
         let _ = N::from_extended_public_key_version_bytes(&data[0..4])?;
-        let format = BitcoinFormat::from_exteded_private_key_version_bytes(&data[0..4])?;
+        let format = BitcoinFormat::from_extended_public_key_version_bytes(&data[0..4])?;
 
         let mut version = [0u8; 4];
         version.copy_from_slice(&data[0..4]);

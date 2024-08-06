@@ -16,7 +16,7 @@ pub trait BitcoinWordlist: Wordlist {
         Ok(Self::get_all()[index].into())
     }
 
-    fn get_index(word: &str) -> Result<String, WordlistError> {
+    fn get_index(word: &str) -> Result<usize, WordlistError> {
         match Self::get_all().iter().position(|element| element == &word) {
             Some(index) => Ok(index),
             None => Err(WordlistError::InvalidWord(word.into())),
