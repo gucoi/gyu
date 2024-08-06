@@ -7,7 +7,7 @@ use gyu_model::{
     utilities::crypto::hash160,
 };
 
-use std::str::FromStr;
+use core::str::FromStr;
 
 use crate::{
     address::BitcoinAddress, derivation_path::BitcoinDerivationPath,
@@ -17,10 +17,10 @@ use crate::{
 
 use base58::{FromBase58, ToBase58};
 
+use core::fmt::{self, Display};
 use hmac::{Hmac, Mac};
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha512;
-use std::fmt::{self, Display};
 
 type HmacSha512 = Hmac<Sha512>;
 

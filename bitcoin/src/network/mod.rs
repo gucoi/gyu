@@ -1,5 +1,4 @@
-pub mod mainnet;
-
+use gyu_model::no_std::*;
 use gyu_model::{
     address::AddressError, derivation_path::ChildIndex,
     extended_private_key::ExtendedPrivateKeyError, extended_public_key::ExtendedPublicKeyError,
@@ -8,6 +7,7 @@ use gyu_model::{
 
 use crate::format::BitcoinFormat;
 
+pub mod mainnet;
 pub use self::mainnet::*;
 
 pub trait BitcoinNetwork: Network {

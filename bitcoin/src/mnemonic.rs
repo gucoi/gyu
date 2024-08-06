@@ -1,9 +1,10 @@
 use core::fmt;
+use core::marker::PhantomData;
 use core::ops::Div;
+use core::str::FromStr;
 use gyu_model::extended_private_key::ExtendedPrivateKey;
+use gyu_model::no_std::*;
 use sha2::{Digest, Sha256, Sha512};
-use std::marker::PhantomData;
-use std::str::FromStr;
 
 use bitvec::order::Msb0;
 use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtended};
@@ -210,7 +211,7 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
 }
 
 impl<N: BitcoinNetwork, W: BitcoinWordlist> fmt::Display for BitcoinMnemonic<N, W> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",

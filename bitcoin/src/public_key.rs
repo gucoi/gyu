@@ -1,9 +1,10 @@
+use core::fmt;
 use gyu_model::{
     address::{Address, AddressError},
     public_key::{PublicKey, PublicKeyError},
 };
 
-use std::{fmt::Display, marker::PhantomData, str::FromStr};
+use core::{fmt::Display, marker::PhantomData, str::FromStr};
 
 use crate::{
     address::BitcoinAddress, format::BitcoinFormat, network::BitcoinNetwork,
@@ -67,7 +68,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinPublicKey<N> {
 }
 
 impl<N: BitcoinNetwork> Display for BitcoinPublicKey<N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.compressed {
             for s in &self.public_key.serialize_compressed()[..] {
                 write!(f, "{:02x}", s)?;

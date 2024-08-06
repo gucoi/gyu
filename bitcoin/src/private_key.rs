@@ -1,5 +1,5 @@
 use core::{fmt, fmt::Display};
-use std::{marker::PhantomData, str::FromStr};
+use core::{marker::PhantomData, str::FromStr};
 
 use base58::{FromBase58, ToBase58};
 use gyu_model::{

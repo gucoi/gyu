@@ -6,12 +6,12 @@ use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use crate::witness_program::WitnessProgram;
 use core::fmt;
-use std::str::FromStr;
+use core::str::FromStr;
+use gyu_model::no_std::{io::Read, *};
 
 use base58::FromBase58;
 use bech32::{Bech32, FromBase32};
 
-use gyu_model::no_std::io::Read;
 use gyu_model::private_key::PrivateKey;
 use gyu_model::transaction::Transaction;
 use gyu_model::transaction::TransactionError;
@@ -139,7 +139,7 @@ pub fn create_script_pub_key<N: BitcoinNetwork>(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[allow(non_camel_case_types)]
 pub enum SignatureHash {
     SIG_ALL = 0x01,

@@ -1,5 +1,5 @@
 use core::fmt;
-use std::str::FromStr;
+use core::str::FromStr;
 
 use base58::{FromBase58, ToBase58};
 use gyu_model::{
@@ -167,7 +167,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
 }
 
 impl<N: BitcoinNetwork> fmt::Display for BitcoinExtendedPublicKey<N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = [0u8; 82];
         result[0..4].copy_from_slice(
             match &N::to_extended_public_key_version_bytes(&self.format) {
@@ -189,6 +189,6 @@ impl<N: BitcoinNetwork> fmt::Display for BitcoinExtendedPublicKey<N> {
         let sum = &checksum(&result[0..78])[0..4];
         result[78..82].copy_from_slice(sum);
 
-        fmt.write_str(&result.to_base58())
+        f.write_str(&result.to_base58())
     }
 }

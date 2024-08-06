@@ -1,8 +1,9 @@
+use core::str::FromStr;
 use failure::Fail;
 use gyu_model::address::AddressError;
 use gyu_model::no_std::*;
 use gyu_model::transaction::TransactionError;
-use std::str::FromStr;
+use hex;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum WitnessProgramError {
