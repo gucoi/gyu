@@ -1,6 +1,7 @@
 use crate::address::{Address, AddressError};
 use crate::derivation_path::{DerivationPath, DerivationPathError};
 
+use crate::extended_public_key::ExtendedPublicKey;
 use crate::format::Format;
 use crate::network::NetworkError;
 use crate::private_key::PrivateKey;
@@ -17,12 +18,16 @@ pub trait ExtendedPrivateKey:
 {
     type Address: Address;
     type DerivationPath: DerivationPath;
-    type ExtendedPublicKey: ExtendedPrivateKey;
+    type ExtendedPublicKey: ExtendedPublicKey;
     type Format: Format;
     type PrivateKey: PrivateKey;
     type PublicKey: PublicKey;
 
-    fn new(seed: &[u8], format: &Self::Format) -> Result<Self, ExtendedPrivateKeyError>;
+    fn new(
+        seed: &[u8],
+        format: &Self::Format,
+        path: &Self::DerivationPath,
+    ) -> Result<Self, ExtendedPrivateKeyError>;
 
     fn new_master(seed: &[u8], format: &Self::Format) -> Result<Self, ExtendedPrivateKeyError>;
 

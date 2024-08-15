@@ -1,8 +1,9 @@
-use std::str::FromStr;
+use core::fmt;
+use core::str::FromStr;
 
 use base58::{FromBase58, ToBase58};
 use gyu_model::{
-    derivation_path::ChildIndex,
+    derivation_path::{ChildIndex, DerivationPath},
     extended_private_key::ExtendedPrivateKey,
     extended_public_key::{ExtendedPublicKey, ExtendedPublicKeyError},
     public_key::PublicKey,
@@ -51,7 +52,7 @@ impl<N: BitcoinNetwork> ExtendedPublicKey for BitcoinExtendedPublicKey<N> {
 
     fn derive(
         &self,
-        path: &Self::DerivatingPath,
+        path: &Self::DerivationPath,
     ) -> Result<Self, gyu_model::extended_public_key::ExtendedPublicKeyError> {
         if self.depth == 255 {
             return Err(ExtendedPublicKeyError::MaximumChildDepthReached(self.depth));
@@ -130,7 +131,7 @@ impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
         }
 
         let _ = N::from_extended_public_key_version_bytes(&data[0..4])?;
-        let format = BitcoinFormat::from_exteded_private_key_version_bytes(&data[0..4])?;
+        let format = BitcoinFormat::from_extended_public_key_version_bytes(&data[0..4])?;
 
         let mut version = [0u8; 4];
         version.copy_from_slice(&data[0..4]);
@@ -162,5 +163,32 @@ impl<N: BitcoinNetwork> FromStr for BitcoinExtendedPublicKey<N> {
             chain_code,
             public_key,
         })
+    }
+}
+
+impl<N: BitcoinNetwork> fmt::Display for BitcoinExtendedPublicKey<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = [0u8; 82];
+        result[0..4].copy_from_slice(
+            match &N::to_extended_public_key_version_bytes(&self.format) {
+                Ok(version) => version,
+                Err(_) => return Err(fmt::Error),
+            },
+        );
+        result[4] = self.depth;
+        result[5..9].copy_from_slice(&self.parent_fingerprint[..]);
+        result[9..13].copy_from_slice(&u32::from(self.child_index).to_be_bytes());
+        result[13..45].copy_from_slice(&self.chain_code[..]);
+        result[45..78].copy_from_slice(
+            &self
+                .public_key
+                .to_secp256k1_public_key()
+                .serialize_compressed()[..],
+        );
+
+        let sum = &checksum(&result[0..78])[0..4];
+        result[78..82].copy_from_slice(sum);
+
+        f.write_str(&result.to_base58())
     }
 }

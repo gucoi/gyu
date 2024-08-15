@@ -6,13 +6,13 @@ use crate::private_key::BitcoinPrivateKey;
 use crate::public_key::BitcoinPublicKey;
 use crate::witness_program::WitnessProgram;
 use core::fmt;
-use std::str::pattern::Pattern;
-use std::str::FromStr;
+use core::str::FromStr;
+use gyu_model::no_std::{io::Read, *};
 
 use base58::FromBase58;
 use bech32::{Bech32, FromBase32};
 
-use gyu_model::no_std::io::Read;
+use gyu_model::private_key::PrivateKey;
 use gyu_model::transaction::Transaction;
 use gyu_model::transaction::TransactionError;
 use gyu_model::transaction::TransactionId;
@@ -139,7 +139,7 @@ pub fn create_script_pub_key<N: BitcoinNetwork>(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[allow(non_camel_case_types)]
 pub enum SignatureHash {
     SIG_ALL = 0x01,
@@ -796,7 +796,7 @@ impl<N: BitcoinNetwork> BitcoinTransaction<N> {
     ) -> Result<Vec<u8>, TransactionError> {
         let mut prev_outputs = vec![];
         let mut prev_sequences = vec![];
-        let mut outputs = vev![];
+        let mut outputs = vec![];
 
         for input in &self.parameters.inputs {
             prev_outputs.extend(&input.outpoint.reverse_transaction_id);

@@ -1,5 +1,6 @@
 use core::fmt;
-use std::str::FromStr;
+use core::str::FromStr;
+use gyu_model::no_std::*;
 
 use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;

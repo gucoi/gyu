@@ -1,14 +1,19 @@
 use core::fmt;
-use std::marker::PhantomData;
-use std::str::FromStr;
+use core::marker::PhantomData;
+use core::ops::Div;
+use core::str::FromStr;
+use gyu_model::extended_private_key::ExtendedPrivateKey;
+use gyu_model::no_std::*;
+use sha2::{Digest, Sha256, Sha512};
 
 use bitvec::order::Msb0;
-use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError};
+use gyu_model::mnemonic::{Mnemonic, MnemonicCount, MnemonicError, MnemonicExtended};
 use hmac::Hmac;
 use rand::Rng;
-use sha2::Sha512;
 
 use crate::address::BitcoinAddress;
+use crate::extended_private_key::BitcoinExtendedPrivateKey;
+use crate::extended_public_key::BitcoinExtendedPublicKey;
 use crate::format::BitcoinFormat;
 use crate::network::BitcoinNetwork;
 use crate::private_key::BitcoinPrivateKey;
@@ -155,6 +160,31 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> Mnemonic for BitcoinMnemonic<N, W> {
     }
 }
 
+impl<N: BitcoinNetwork, W: BitcoinWordlist> MnemonicExtended for BitcoinMnemonic<N, W> {
+    type ExtendedPrivateKey = BitcoinExtendedPrivateKey<N>;
+    type ExtendedPublicKey = BitcoinExtendedPublicKey<N>;
+
+    fn to_extended_private_key(
+        &self,
+        password: Option<&str>,
+    ) -> Result<Self::ExtendedPrivateKey, MnemonicError> {
+        Ok(Self::ExtendedPrivateKey::new_master(
+            self.to_seed(password)?.as_slice(),
+            &BitcoinFormat::P2PKH,
+        )?)
+    }
+
+    /// Returns the extended public key of the corresponding mnemonic.
+    fn to_extended_public_key(
+        &self,
+        password: Option<&str>,
+    ) -> Result<Self::ExtendedPublicKey, MnemonicError> {
+        Ok(self
+            .to_extended_private_key(password)?
+            .to_extended_public_key())
+    }
+}
+
 impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
     pub fn verify_phrase(phrase: &str) -> bool {
         Self::from_phrase(phrase).is_ok()
@@ -172,6 +202,7 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> BitcoinMnemonic<N, W> {
         Ok(seed)
     }
 }
+
 impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
     type Err = MnemonicError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -180,7 +211,7 @@ impl<N: BitcoinNetwork, W: BitcoinWordlist> FromStr for BitcoinMnemonic<N, W> {
 }
 
 impl<N: BitcoinNetwork, W: BitcoinWordlist> fmt::Display for BitcoinMnemonic<N, W> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",

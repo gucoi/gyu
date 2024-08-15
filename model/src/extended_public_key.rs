@@ -22,7 +22,7 @@ pub trait ExtendedPublicKey:
 
     fn from_extended_private_key(extended_private_key: &Self::ExtendedPrivateKey) -> Self;
 
-    fn derive(&self, path: &Self::DerivatingPath) -> Result<Self, ExtendedPublicKeyError>;
+    fn derive(&self, path: &Self::DerivationPath) -> Result<Self, ExtendedPublicKeyError>;
 
     fn to_public_key(&self) -> Self::PublicKey;
 

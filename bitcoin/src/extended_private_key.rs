@@ -1,24 +1,26 @@
 use gyu_model::{
-    derivation_path::ChildIndex,
+    derivation_path::{ChildIndex, DerivationPath},
     extended_private_key::{ExtendedPrivateKey, ExtendedPrivateKeyError},
+    extended_public_key::ExtendedPublicKey,
     private_key::PrivateKey,
     utilities::crypto::checksum,
     utilities::crypto::hash160,
 };
 
-use std::str::FromStr;
+use core::str::FromStr;
 
 use crate::{
-    address::BitcoinAddress, derivation_path::BitcoinDerivationPath, format::BitcoinFormat,
-    network::BitcoinNetwork, private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
+    address::BitcoinAddress, derivation_path::BitcoinDerivationPath,
+    extended_public_key::BitcoinExtendedPublicKey, format::BitcoinFormat, network::BitcoinNetwork,
+    private_key::BitcoinPrivateKey, public_key::BitcoinPublicKey,
 };
 
 use base58::{FromBase58, ToBase58};
 
+use core::fmt::{self, Display};
 use hmac::{Hmac, Mac};
 use secp256k1::{PublicKey, SecretKey};
 use sha2::Sha512;
-use std::fmt::{self, Display};
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -43,6 +45,7 @@ impl<N: BitcoinNetwork> ExtendedPrivateKey for BitcoinExtendedPrivateKey<N> {
     fn new(
         seed: &[u8],
         format: &Self::Format,
+        path: &Self::DerivationPath,
     ) -> Result<Self, gyu_model::extended_private_key::ExtendedPrivateKeyError> {
         Ok(Self::new_master(seed, format)?.derive(path)?)
     }

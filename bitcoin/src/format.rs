@@ -1,7 +1,9 @@
 use core::fmt;
 
+use gyu_model::no_std::*;
 use gyu_model::{
-    address::AddressError, extended_private_key::ExtendedPrivateKeyError, format::Format,
+    address::AddressError, extended_private_key::ExtendedPrivateKeyError,
+    extended_public_key::ExtendedPublicKeyError, format::Format,
 };
 use serde::Serialize;
 
@@ -36,7 +38,7 @@ impl BitcoinFormat {
         }
     }
 
-    pub fn from_exteded_private_key_version_bytes(
+    pub fn from_extended_private_key_version_bytes(
         prefix: &[u8],
     ) -> Result<Self, ExtendedPrivateKeyError> {
         match prefix[0..4] {
@@ -45,6 +47,16 @@ impl BitcoinFormat {
             _ => Err(ExtendedPrivateKeyError::InvalidVersionBytes(
                 prefix.to_vec(),
             )),
+        }
+    }
+
+    pub fn from_extended_public_key_version_bytes(
+        prefix: &[u8],
+    ) -> Result<Self, ExtendedPublicKeyError> {
+        match prefix[0..4] {
+            [0x04, 0x88, 0xB2, 0x1E] | [0x04, 0x35, 0x87, 0xCF] => Ok(BitcoinFormat::P2PKH),
+            [0x04, 0x9D, 0x7C, 0xB2] | [0x04, 0x4A, 0x52, 0x62] => Ok(BitcoinFormat::P2SH_P2WPKH),
+            _ => Err(ExtendedPublicKeyError::InvalidVersionBytes(prefix.to_vec())),
         }
     }
 }

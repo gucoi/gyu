@@ -41,19 +41,19 @@ pub trait MnemonicCount: Mnemonic {
     fn new_with_count<R: Rng>(rng: &mut R, word_count: u8) -> Result<Self, MnemonicError>;
 }
 
-pub trait MnemonicExtend: Mnemonic {
-    type ExtendPulicKey: ExtendedPublicKey;
-    type ExtendPrivateKey: ExtendedPrivateKey;
+pub trait MnemonicExtended: Mnemonic {
+    type ExtendedPublicKey: ExtendedPublicKey;
+    type ExtendedPrivateKey: ExtendedPrivateKey;
 
-    fn to_extend_public_key(
+    fn to_extended_private_key(
         &self,
         password: Option<&str>,
-    ) -> Result<Self::ExtendPulicKey, MnemonicError>;
+    ) -> Result<Self::ExtendedPrivateKey, MnemonicError>;
 
-    fn to_extend_private_key(
+    fn to_extended_public_key(
         &self,
         password: Option<&str>,
-    ) -> Result<Self::ExtendPulicKey, MnemonicError>;
+    ) -> Result<Self::ExtendedPublicKey, MnemonicError>;
 }
 
 #[derive(Debug, Fail)]
@@ -125,5 +125,17 @@ impl From<ExtendedPrivateKeyError> for MnemonicError {
 impl From<PrivateKeyError> for MnemonicError {
     fn from(value: PrivateKeyError) -> Self {
         MnemonicError::PrivateKeyError(value)
+    }
+}
+
+impl From<WordlistError> for MnemonicError {
+    fn from(value: WordlistError) -> Self {
+        MnemonicError::WordlistError(value)
+    }
+}
+
+impl From<rand_core::Error> for MnemonicError {
+    fn from(value: rand_core::Error) -> Self {
+        MnemonicError::Crate("rand", format!("{:?}", value))
     }
 }
